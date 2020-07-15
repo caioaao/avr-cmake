@@ -1,5 +1,9 @@
 #+TITLE: Writing a CMake project for Arduino-compatible boards
 
+PS: this is a literate programming document. This means you can evaluate it and
+it will generate and/or run examples in code blocks. See this for more info:
+http://cachestocaches.com/2018/6/org-literate-programming/
+
 * Motivation
 
   The Arduino toolchain is a great tool: they abstracted away the whole build
@@ -297,7 +301,7 @@
    It basically adds the arduino header and a main function to a sketch. Let's
    do that manually, since the goal here is to work with plain C++ files.
 
-   #+begin_src c++ :tangle examples/buzzer/src/main.cpp :mkdirp t :noweb yes
+   #+begin_src c++ :tangle examples/buzzer/src/main.cpp :mkdirp t
      #include <Arduino.h>
 
      <<buzzer_sketch>>
@@ -309,7 +313,7 @@
      }
    #+end_src
 
-   #+begin_src c++ :tangle examples/balancing/src/main.cpp :mkdirp t :noweb yes
+   #+begin_src c++ :tangle examples/balancing/src/main.cpp :mkdirp t
      #include <Arduino.h>
 
      <<balancing_sketch>>
@@ -510,7 +514,7 @@
       include_directories(BEFORE ${ARDUINO_CORE_INCLUDES})
     #+end_src
 
-    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
+    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt
       <<buzzer-cmake-conf-header>>
       <<cmake-conf-core-includes>>
     #+end_src
@@ -574,7 +578,7 @@
 
     We put this in our config file and test it again:
 
-    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
+    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt
       <<buzzer-cmake-conf-header>>
       <<cmake-conf-core-includes>>
       <<cmake-conf-avr-includes>>
@@ -646,7 +650,7 @@
 
     And the file we have now is:
 
-    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
+    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt
       <<buzzer-cmake-conf-header>>
       <<cmake-conf-core-includes>>
       <<cmake-conf-avr-includes>>
@@ -762,7 +766,7 @@
         -DUSB_MANUFACTURER=${AVR_USB_MANUFACTURER} -DUSB_PRODUCT=${AVR_USB_PRODUCT})
     #+end_src
 
-    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
+    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt
       <<buzzer-cmake-conf-header>>
       <<cmake-conf-core-includes>>
       <<cmake-conf-avr-includes>>
@@ -871,7 +875,7 @@
       set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -mmcu=atmega32u4)
     #+end_src
 
-    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
+    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt
       <<cmake-conf-cross-compilation-variables>>
       <<buzzer-cmake-conf-header>>
       <<cmake-conf-core-includes>>
@@ -984,8 +988,7 @@
       add_definitions("-D__progmem__=address_space(1)")
     #+end_src
 
-    #+name: cmake-buzzer-conf-after-progmem
-    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
+    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt
       <<cmake-conf-cross-compilation-variables>>
       <<buzzer-cmake-conf-header>>
       <<cmake-conf-core-includes>>
@@ -994,6 +997,8 @@
       <<cmake-conf-defines>>
       <<cmake-conf-define-progmem>>
     #+end_src
+
+    Now let's run and check the results:
 
     #+begin_src sh :dir examples :results output verbatim
       ./cmake_test.sh buzzer
@@ -1044,12 +1049,12 @@
       int main() {
           printf("%d, %d", _constWithAddr[0], _constWithoutAddr[1]);
       }
-    #+end_srcp
+    #+end_src
 
     Now the CMake configuration. The last line tells the compiler to emit LLVM
     bitcode instead of the object file.
 
-    #+begin_src cmake :tangle examples/progmemTest/src/CMakeLists.txt :noweb yes
+    #+begin_src cmake :tangle examples/progmemTest/src/CMakeLists.txt
       <<cmake-conf-cross-compilation-variables>>
       cmake_minimum_required(VERSION 3.0.0)
       project(progmem_test CXX)
