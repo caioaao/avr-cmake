@@ -755,7 +755,7 @@ clean:
     make: *** [Makefile:84: all] Error 2
     #+end_example
 
-    The good news is no more linking errors occurred for now. We can now just
+    The good news is no more includes errors occurred for now. We can now just
     copy those missing definitions from arduino-cli's commands:
 
     #+begin_src cmake :noweb-ref cmake-conf-defines
