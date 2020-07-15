@@ -1120,3 +1120,37 @@
     Cool! We can see from the output of the previous program that
     ~_constWithAddr~ is assigned to ~addrspace(1)~ and ~_constWithoutAddr~
     doesn't have an ~addrspace~ set up. This is exactly what we wanted.
+
+    At this point we're compiling our main file (the last warning is just an
+    optimization alert - we'll address that later). And that means we can
+    generate the ~compile-commands.json~ file! Let's do that and marvel at the
+    beauty of proper IDE integration using a language server!
+
+    #+begin_src sh :dir examples/buzzer :results output verbatim
+      out_dir=`mktemp -d`
+      cmake -S ./src -B ${out_dir} -DCMAKE_EXPORT_COMPILE_COMMANDS=1
+
+      cp ${out_dir}/compile_commands.json .
+    #+end_src
+
+    #+RESULTS:
+    #+begin_example
+    -- The CXX compiler identification is Clang 10.0.0
+    -- Check for working CXX compiler: /usr/bin/clang++
+    -- Check for working CXX compiler: /usr/bin/clang++ -- works
+    -- Detecting CXX compiler ABI info
+    -- Detecting CXX compiler ABI info - done
+    -- Detecting CXX compile features
+    -- Detecting CXX compile features - done
+    -- Configuring done
+    -- Generating done
+    -- Build files have been written to: /tmp/tmp.oyPAKBLivI
+    #+end_example
+
+    Yay! You can test clangd with any LSP client now and it should provide
+    autocomplete for you. Here's a screenshot of my Emacs screen showing the
+    definition of ~DDRC~:
+
+    #+CAPTION: Emacs LSP mode - showing documentation of constant defined by 32u4 library
+    #+NAME: fig:LSP documentation
+    [[./img/lsp_doc.png]]
