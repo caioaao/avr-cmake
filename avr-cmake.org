@@ -492,626 +492,631 @@
    make: *** [Makefile:84: all] Error 2
    #+end_example
 
-   Yeah, it doesn't find the includes, of course. We can see where they are from
-   the arduino-cli output and it's this:
-   ~~/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino~. Let's
-   add it as an arduino core dependency:
+   As expected this didn't work. We'll start by compiling our main file, and
+   then go through compiling the dependencies.
 
-   #+name: cmake-conf-core-includes
-   #+begin_src cmake
-     set(ARDUINO_CORE_VERSION 1.8.3)
-     set(ARDUINO_CORE_INCLUDES $ENV{HOME}/.arduino15/packages/arduino/hardware/avr/${ARDUINO_CORE_VERSION}/cores/arduino)
+*** Compiling main
 
-     include_directories(BEFORE ${ARDUINO_CORE_INCLUDES})
-   #+end_src
+    From the previous command we see it doesn't find the includes, of course. We
+    can see where they are from the arduino-cli output and it's this:
+    ~~/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino~. Let's add
+    it as an arduino core dependency:
 
-   #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
-     <<buzzer-cmake-conf-header>>
-     <<cmake-conf-core-includes>>
-   #+end_src
+    #+name: cmake-conf-core-includes
+    #+begin_src cmake
+      set(ARDUINO_CORE_VERSION 1.8.3)
+      set(ARDUINO_CORE_INCLUDES $ENV{HOME}/.arduino15/packages/arduino/hardware/avr/${ARDUINO_CORE_VERSION}/cores/arduino)
 
-   And now let's test it again:
+      include_directories(BEFORE ${ARDUINO_CORE_INCLUDES})
+    #+end_src
 
-   #+begin_src sh :dir examples :results output verbatim
-     ./cmake_test.sh buzzer
-   #+end_src
+    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
+      <<buzzer-cmake-conf-header>>
+      <<cmake-conf-core-includes>>
+    #+end_src
 
-   #+RESULTS:
-   #+begin_example
-   -- The CXX compiler identification is GNU 9.3.0
-   -- Check for working CXX compiler: /usr/bin/c++
-   -- Check for working CXX compiler: /usr/bin/c++ -- works
-   -- Detecting CXX compiler ABI info
-   -- Detecting CXX compiler ABI info - done
-   -- Detecting CXX compile features
-   -- Detecting CXX compile features - done
-   -- Configuring done
-   -- Generating done
-   -- Build files have been written to: /tmp/tmp.1e1b9BMi00
-   Scanning dependencies of target buzzer
-   [ 50%] Building CXX object CMakeFiles/buzzer.dir/main.cpp.o
-   In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:28:10: fatal error: avr/pgmspace.h: No such file or directory
-      28 | #include <avr/pgmspace.h>
-         |          ^~~~~~~~~~~~~~~~
-   compilation terminated.
-   make[2]: *** [CMakeFiles/buzzer.dir/build.make:63: CMakeFiles/buzzer.dir/main.cpp.o] Error 1
-   make[1]: *** [CMakeFiles/Makefile2:76: CMakeFiles/buzzer.dir/all] Error 2
-   make: *** [Makefile:84: all] Error 2
-   #+end_example
+    And now let's test it again:
 
-   Yup. Progress. Now we have to add AVR includes. We can't see those in the
-   commands issued by arduino-cli because it's defined by default with
-   =avr-g++=. But we can get those by running avr-g++ directly to print the
-   search paths:
+    #+begin_src sh :dir examples :results output verbatim
+      ./cmake_test.sh buzzer
+    #+end_src
 
-   #+begin_src sh :dir examples/buzzer/src :results output verbatim
-     ~/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/avr-g++ -print-search-dirs
-   #+end_src
+    #+RESULTS:
+    #+begin_example
+    -- The CXX compiler identification is GNU 9.3.0
+    -- Check for working CXX compiler: /usr/bin/c++
+    -- Check for working CXX compiler: /usr/bin/c++ -- works
+    -- Detecting CXX compiler ABI info
+    -- Detecting CXX compiler ABI info - done
+    -- Detecting CXX compile features
+    -- Detecting CXX compile features - done
+    -- Configuring done
+    -- Generating done
+    -- Build files have been written to: /tmp/tmp.1e1b9BMi00
+    Scanning dependencies of target buzzer
+    [ 50%] Building CXX object CMakeFiles/buzzer.dir/main.cpp.o
+    In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:28:10: fatal error: avr/pgmspace.h: No such file or directory
+       28 | #include <avr/pgmspace.h>
+          |          ^~~~~~~~~~~~~~~~
+    compilation terminated.
+    make[2]: *** [CMakeFiles/buzzer.dir/build.make:63: CMakeFiles/buzzer.dir/main.cpp.o] Error 1
+    make[1]: *** [CMakeFiles/Makefile2:76: CMakeFiles/buzzer.dir/all] Error 2
+    make: *** [Makefile:84: all] Error 2
+    #+end_example
 
-   #+RESULTS:
-   : install: /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/../lib/gcc/avr/7.3.0/
-   : programs: =/home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/../libexec/gcc/avr/7.3.0/:/home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/../libexec/gcc/:/home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/../lib/gcc/avr/7.3.0/../../../../avr/bin/avr/7.3.0/:/home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/../lib/gcc/avr/7.3.0/../../../../avr/bin/
-   : libraries: =/home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/../lib/gcc/avr/7.3.0/:/home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/../lib/gcc/:/home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/../lib/gcc/avr/7.3.0/../../../../avr/lib/avr/7.3.0/:/home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/../lib/gcc/avr/7.3.0/../../../../avr/lib/
+    Yup. Progress. Now we have to add AVR includes. We can't see those in the
+    commands issued by arduino-cli because it's defined by default with
+    =avr-g++=. But we can get those by running avr-g++ directly to print the
+    search paths:
 
-   From that we see the library is inside
-   ~<arduino-cli-dir>/packages/arduino/tools/avr-gcc/<avr-gcc-version>/avr/lib~.
-   next to this one we see the include dir. Let's add this to the config with the following snippet:
+    #+begin_src sh :dir examples/buzzer/src :results output verbatim
+      ~/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/avr-g++ -print-search-dirs
+    #+end_src
 
-   #+name: cmake-conf-avr-includes
-   #+begin_src cmake
-     # I'll hard code this for now. we can play around with discovery later on
-     set(AVR_GCC_VERSION "7.3.0-atmel3.6.1-arduino7")
-     set(AVR_GCC_INCLUDES $ENV{HOME}/.arduino15/packages/arduino/tools/avr-gcc/${AVR_GCC_VERSION}/avr/include)
+    #+RESULTS:
+    : install: /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/../lib/gcc/avr/7.3.0/
+    : programs: =/home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/../libexec/gcc/avr/7.3.0/:/home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/../libexec/gcc/:/home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/../lib/gcc/avr/7.3.0/../../../../avr/bin/avr/7.3.0/:/home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/../lib/gcc/avr/7.3.0/../../../../avr/bin/
+    : libraries: =/home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/../lib/gcc/avr/7.3.0/:/home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/../lib/gcc/:/home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/../lib/gcc/avr/7.3.0/../../../../avr/lib/avr/7.3.0/:/home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/../lib/gcc/avr/7.3.0/../../../../avr/lib/
 
-     include_directories(AFTER ${AVR_GCC_INCLUDES})
-   #+end_src
+    From that we see the library is inside
+    ~<arduino-cli-dir>/packages/arduino/tools/avr-gcc/<avr-gcc-version>/avr/lib~.
+    next to this one we see the include dir. Let's add this to the config with the following snippet:
 
-   We put this in our config file and test it again:
+    #+name: cmake-conf-avr-includes
+    #+begin_src cmake
+      # I'll hard code this for now. we can play around with discovery later on
+      set(AVR_GCC_VERSION "7.3.0-atmel3.6.1-arduino7")
+      set(AVR_GCC_INCLUDES $ENV{HOME}/.arduino15/packages/arduino/tools/avr-gcc/${AVR_GCC_VERSION}/avr/include)
 
-   #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
-     <<buzzer-cmake-conf-header>>
-     <<cmake-conf-core-includes>>
-     <<cmake-conf-avr-includes>>
-   #+end_src
+      include_directories(AFTER ${AVR_GCC_INCLUDES})
+    #+end_src
 
-   #+begin_src sh :dir examples :results output verbatim
-     ./cmake_test.sh buzzer
-   #+end_src
+    We put this in our config file and test it again:
 
-   #+RESULTS:
-   #+begin_example
-   -- The CXX compiler identification is GNU 9.3.0
-   -- Check for working CXX compiler: /usr/bin/c++
-   -- Check for working CXX compiler: /usr/bin/c++ -- works
-   -- Detecting CXX compiler ABI info
-   -- Detecting CXX compiler ABI info - done
-   -- Detecting CXX compile features
-   -- Detecting CXX compile features - done
-   -- Configuring done
-   -- Generating done
-   -- Build files have been written to: /tmp/tmp.hsrxhvF9AO
-   Scanning dependencies of target buzzer
-   [ 50%] Building CXX object CMakeFiles/buzzer.dir/main.cpp.o
-   In file included from /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:90,
-                    from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:28,
-                    from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/io.h:711:6: warning: #warning "device type not defined" [-Wcpp]
-     711 | #    warning "device type not defined"
-         |      ^~~~~~~
-   In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/USBAPI.h:25,
-                    from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:234,
-                    from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/eeprom.h:41:3: warning: #warning "Device does not have EEPROM available." [-Wcpp]
-      41 | # warning "Device does not have EEPROM available."
-         |   ^~~~~~~
-   In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/USBAPI.h:27,
-                    from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:234,
-                    from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/util/delay.h:92:3: warning: #warning "F_CPU not defined for <util/delay.h>" [-Wcpp]
-      92 | # warning "F_CPU not defined for <util/delay.h>"
-         |   ^~~~~~~
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/util/delay.h:112:3: warning: #warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed" [-Wcpp]
-     112 | # warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
-         |   ^~~~~~~
-   In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:258:10: fatal error: pins_arduino.h: No such file or directory
-     258 | #include "pins_arduino.h"
-         |          ^~~~~~~~~~~~~~~~
-   compilation terminated.
-   make[2]: *** [CMakeFiles/buzzer.dir/build.make:63: CMakeFiles/buzzer.dir/main.cpp.o] Error 1
-   make[1]: *** [CMakeFiles/Makefile2:76: CMakeFiles/buzzer.dir/all] Error 2
-   make: *** [Makefile:84: all] Error 2
-   #+end_example
+    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
+      <<buzzer-cmake-conf-header>>
+      <<cmake-conf-core-includes>>
+      <<cmake-conf-avr-includes>>
+    #+end_src
 
-   More progress! Now what we are missing is the variant includes. This will
-   define those missing values. We can see on arduino-cli's output that it uses
-   arduino leonardo's variants, but we'll use the one provided by Pololu's library:
+    #+begin_src sh :dir examples :results output verbatim
+      ./cmake_test.sh buzzer
+    #+end_src
 
-   #+name: cmake-conf-mcu-variant-includes
-   #+begin_src cmake
-     set(MCU_VARIANT_PACKAGE pololu-a-star) # the package that defines the variant
-     set(MCU_VARIANT_NAME a-star328pb)
-     set(MCU_VARIANT_VERSION 4.0.2)
+    #+RESULTS:
+    #+begin_example
+    -- The CXX compiler identification is GNU 9.3.0
+    -- Check for working CXX compiler: /usr/bin/c++
+    -- Check for working CXX compiler: /usr/bin/c++ -- works
+    -- Detecting CXX compiler ABI info
+    -- Detecting CXX compiler ABI info - done
+    -- Detecting CXX compile features
+    -- Detecting CXX compile features - done
+    -- Configuring done
+    -- Generating done
+    -- Build files have been written to: /tmp/tmp.hsrxhvF9AO
+    Scanning dependencies of target buzzer
+    [ 50%] Building CXX object CMakeFiles/buzzer.dir/main.cpp.o
+    In file included from /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:90,
+                     from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:28,
+                     from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/io.h:711:6: warning: #warning "device type not defined" [-Wcpp]
+      711 | #    warning "device type not defined"
+          |      ^~~~~~~
+    In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/USBAPI.h:25,
+                     from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:234,
+                     from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/eeprom.h:41:3: warning: #warning "Device does not have EEPROM available." [-Wcpp]
+       41 | # warning "Device does not have EEPROM available."
+          |   ^~~~~~~
+    In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/USBAPI.h:27,
+                     from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:234,
+                     from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/util/delay.h:92:3: warning: #warning "F_CPU not defined for <util/delay.h>" [-Wcpp]
+       92 | # warning "F_CPU not defined for <util/delay.h>"
+          |   ^~~~~~~
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/util/delay.h:112:3: warning: #warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed" [-Wcpp]
+      112 | # warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
+          |   ^~~~~~~
+    In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:258:10: fatal error: pins_arduino.h: No such file or directory
+      258 | #include "pins_arduino.h"
+          |          ^~~~~~~~~~~~~~~~
+    compilation terminated.
+    make[2]: *** [CMakeFiles/buzzer.dir/build.make:63: CMakeFiles/buzzer.dir/main.cpp.o] Error 1
+    make[1]: *** [CMakeFiles/Makefile2:76: CMakeFiles/buzzer.dir/all] Error 2
+    make: *** [Makefile:84: all] Error 2
+    #+end_example
 
-     set(MCU_VARIANT_INCLUDES $ENV{HOME}/.arduino15/packages/${MCU_VARIANT_PACKAGE}/hardware/avr/${MCU_VARIANT_VERSION}/variants/${MCU_VARIANT_NAME})
+    More progress! Now what we are missing is the variant includes. This will
+    define those missing values. We can see on arduino-cli's output that it uses
+    arduino leonardo's variants, but we'll use the one provided by Pololu's library:
 
-     include_directories(AFTER ${MCU_VARIANT_INCLUDES})
-   #+end_src
+    #+name: cmake-conf-mcu-variant-includes
+    #+begin_src cmake
+      set(MCU_VARIANT_PACKAGE pololu-a-star) # the package that defines the variant
+      set(MCU_VARIANT_NAME a-star328pb)
+      set(MCU_VARIANT_VERSION 4.0.2)
 
-   And the file we have now is:
+      set(MCU_VARIANT_INCLUDES $ENV{HOME}/.arduino15/packages/${MCU_VARIANT_PACKAGE}/hardware/avr/${MCU_VARIANT_VERSION}/variants/${MCU_VARIANT_NAME})
 
-   #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
-     <<buzzer-cmake-conf-header>>
-     <<cmake-conf-core-includes>>
-     <<cmake-conf-avr-includes>>
-     <<cmake-conf-mcu-variant-includes>>
-   #+end_src
+      include_directories(AFTER ${MCU_VARIANT_INCLUDES})
+    #+end_src
 
-   And our new output:
+    And the file we have now is:
 
-   #+begin_src sh :dir examples :results output verbatim
-     ./cmake_test.sh buzzer
-   #+end_src
+    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
+      <<buzzer-cmake-conf-header>>
+      <<cmake-conf-core-includes>>
+      <<cmake-conf-avr-includes>>
+      <<cmake-conf-mcu-variant-includes>>
+    #+end_src
 
-   #+RESULTS:
-   #+begin_example
-   -- The CXX compiler identification is GNU 9.3.0
-   -- Check for working CXX compiler: /usr/bin/c++
-   -- Check for working CXX compiler: /usr/bin/c++ -- works
-   -- Detecting CXX compiler ABI info
-   -- Detecting CXX compiler ABI info - done
-   -- Detecting CXX compile features
-   -- Detecting CXX compile features - done
-   -- Configuring done
-   -- Generating done
-   -- Build files have been written to: /tmp/tmp.Ojyqv15iSg
-   Scanning dependencies of target buzzer
-   [ 50%] Building CXX object CMakeFiles/buzzer.dir/main.cpp.o
-   In file included from /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:90,
-                    from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:28,
-                    from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/io.h:711:6: warning: #warning "device type not defined" [-Wcpp]
-     711 | #    warning "device type not defined"
-         |      ^~~~~~~
-   In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/USBAPI.h:25,
-                    from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:234,
-                    from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/eeprom.h:41:3: warning: #warning "Device does not have EEPROM available." [-Wcpp]
-      41 | # warning "Device does not have EEPROM available."
-         |   ^~~~~~~
-   In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/USBAPI.h:27,
-                    from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:234,
-                    from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/util/delay.h:92:3: warning: #warning "F_CPU not defined for <util/delay.h>" [-Wcpp]
-      92 | # warning "F_CPU not defined for <util/delay.h>"
-         |   ^~~~~~~
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/util/delay.h:112:3: warning: #warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed" [-Wcpp]
-     112 | # warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
-         |   ^~~~~~~
-   In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:164:48: warning: 'progmem' attribute directive ignored [-Wattributes]
-     164 | extern const uint16_t PROGMEM port_to_mode_PGM[];
-         |                                                ^
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:165:49: warning: 'progmem' attribute directive ignored [-Wattributes]
-     165 | extern const uint16_t PROGMEM port_to_input_PGM[];
-         |                                                 ^
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:166:50: warning: 'progmem' attribute directive ignored [-Wattributes]
-     166 | extern const uint16_t PROGMEM port_to_output_PGM[];
-         |                                                  ^
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:168:54: warning: 'progmem' attribute directive ignored [-Wattributes]
-     168 | extern const uint8_t PROGMEM digital_pin_to_port_PGM[];
-         |                                                      ^
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:170:58: warning: 'progmem' attribute directive ignored [-Wattributes]
-     170 | extern const uint8_t PROGMEM digital_pin_to_bit_mask_PGM[];
-         |                                                          ^
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:171:55: warning: 'progmem' attribute directive ignored [-Wattributes]
-     171 | extern const uint8_t PROGMEM digital_pin_to_timer_PGM[];
-         |                                                       ^
-   In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:258,
-                    from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/pololu-a-star/hardware/avr/4.0.2/variants/a-star328pb/pins_arduino.h: In function 'void analogWrite328PB(uint8_t, int)':
-   /home/caio/.arduino15/packages/pololu-a-star/hardware/avr/4.0.2/variants/a-star328pb/pins_arduino.h:237:7: error: 'PORTD' was not declared in this scope; did you mean 'PORT0'?
-     237 |       PORTD |= (1 << 2);
-         |       ^~~~~
-         |       PORT0
-   /home/caio/.arduino15/packages/pololu-a-star/hardware/avr/4.0.2/variants/a-star328pb/pins_arduino.h:242:7: error: 'PORTD' was not declared in this scope; did you mean 'PORT0'?
-     242 |       PORTD &= ~(1 << 2);
-         |       ^~~~~
-         |       PORT0
-   /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp: In function 'void setup()':
-   /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:7:5: error: 'DDRC' was not declared in this scope
-       7 |     DDRC |= (1 << DDC7);    // Make pin 13 be an output.
-         |     ^~~~
-   /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:7:19: error: 'DDC7' was not declared in this scope; did you mean 'DD7'?
-       7 |     DDRC |= (1 << DDC7);    // Make pin 13 be an output.
-         |                   ^~~~
-         |                   DD7
-   /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp: In function 'void loop()':
-   /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:11:5: error: 'PORTC' was not declared in this scope; did you mean 'PORT0'?
-      11 |     PORTC |= (1 << PORTC7);   // Turn the LED on.
-         |     ^~~~~
-         |     PORT0
-   /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:11:20: error: 'PORTC7' was not declared in this scope; did you mean 'PORT7'?
-      11 |     PORTC |= (1 << PORTC7);   // Turn the LED on.
-         |                    ^~~~~~
-         |                    PORT7
-   make[2]: *** [CMakeFiles/buzzer.dir/build.make:63: CMakeFiles/buzzer.dir/main.cpp.o] Error 1
-   make[1]: *** [CMakeFiles/Makefile2:76: CMakeFiles/buzzer.dir/all] Error 2
-   make: *** [Makefile:84: all] Error 2
-   #+end_example
+    And our new output:
 
-   The good news is no more linking errors occurred for now. We can now just
-   copy those missing definitions from arduino-cli's commands:
+    #+begin_src sh :dir examples :results output verbatim
+      ./cmake_test.sh buzzer
+    #+end_src
 
-   #+name: cmake-conf-defines
-   #+begin_src cmake
-     set(AVR_CPU_FREQUENCY 16000000L)
-     set(AVR_USB_MANUFACTURER "Pololu Corporation")
-     set(AVR_USB_PRODUCT "Pololu A-Star 32U4")
-     set(AVR_USB_PRODUCT_ID 0x2300)
-     set(AVR_USB_VENDOR_ID 0x1ffb)
+    #+RESULTS:
+    #+begin_example
+    -- The CXX compiler identification is GNU 9.3.0
+    -- Check for working CXX compiler: /usr/bin/c++
+    -- Check for working CXX compiler: /usr/bin/c++ -- works
+    -- Detecting CXX compiler ABI info
+    -- Detecting CXX compiler ABI info - done
+    -- Detecting CXX compile features
+    -- Detecting CXX compile features - done
+    -- Configuring done
+    -- Generating done
+    -- Build files have been written to: /tmp/tmp.Ojyqv15iSg
+    Scanning dependencies of target buzzer
+    [ 50%] Building CXX object CMakeFiles/buzzer.dir/main.cpp.o
+    In file included from /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:90,
+                     from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:28,
+                     from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/io.h:711:6: warning: #warning "device type not defined" [-Wcpp]
+      711 | #    warning "device type not defined"
+          |      ^~~~~~~
+    In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/USBAPI.h:25,
+                     from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:234,
+                     from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/eeprom.h:41:3: warning: #warning "Device does not have EEPROM available." [-Wcpp]
+       41 | # warning "Device does not have EEPROM available."
+          |   ^~~~~~~
+    In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/USBAPI.h:27,
+                     from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:234,
+                     from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/util/delay.h:92:3: warning: #warning "F_CPU not defined for <util/delay.h>" [-Wcpp]
+       92 | # warning "F_CPU not defined for <util/delay.h>"
+          |   ^~~~~~~
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/util/delay.h:112:3: warning: #warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed" [-Wcpp]
+      112 | # warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
+          |   ^~~~~~~
+    In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:164:48: warning: 'progmem' attribute directive ignored [-Wattributes]
+      164 | extern const uint16_t PROGMEM port_to_mode_PGM[];
+          |                                                ^
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:165:49: warning: 'progmem' attribute directive ignored [-Wattributes]
+      165 | extern const uint16_t PROGMEM port_to_input_PGM[];
+          |                                                 ^
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:166:50: warning: 'progmem' attribute directive ignored [-Wattributes]
+      166 | extern const uint16_t PROGMEM port_to_output_PGM[];
+          |                                                  ^
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:168:54: warning: 'progmem' attribute directive ignored [-Wattributes]
+      168 | extern const uint8_t PROGMEM digital_pin_to_port_PGM[];
+          |                                                      ^
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:170:58: warning: 'progmem' attribute directive ignored [-Wattributes]
+      170 | extern const uint8_t PROGMEM digital_pin_to_bit_mask_PGM[];
+          |                                                          ^
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:171:55: warning: 'progmem' attribute directive ignored [-Wattributes]
+      171 | extern const uint8_t PROGMEM digital_pin_to_timer_PGM[];
+          |                                                       ^
+    In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:258,
+                     from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/pololu-a-star/hardware/avr/4.0.2/variants/a-star328pb/pins_arduino.h: In function 'void analogWrite328PB(uint8_t, int)':
+    /home/caio/.arduino15/packages/pololu-a-star/hardware/avr/4.0.2/variants/a-star328pb/pins_arduino.h:237:7: error: 'PORTD' was not declared in this scope; did you mean 'PORT0'?
+      237 |       PORTD |= (1 << 2);
+          |       ^~~~~
+          |       PORT0
+    /home/caio/.arduino15/packages/pololu-a-star/hardware/avr/4.0.2/variants/a-star328pb/pins_arduino.h:242:7: error: 'PORTD' was not declared in this scope; did you mean 'PORT0'?
+      242 |       PORTD &= ~(1 << 2);
+          |       ^~~~~
+          |       PORT0
+    /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp: In function 'void setup()':
+    /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:7:5: error: 'DDRC' was not declared in this scope
+        7 |     DDRC |= (1 << DDC7);    // Make pin 13 be an output.
+          |     ^~~~
+    /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:7:19: error: 'DDC7' was not declared in this scope; did you mean 'DD7'?
+        7 |     DDRC |= (1 << DDC7);    // Make pin 13 be an output.
+          |                   ^~~~
+          |                   DD7
+    /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp: In function 'void loop()':
+    /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:11:5: error: 'PORTC' was not declared in this scope; did you mean 'PORT0'?
+       11 |     PORTC |= (1 << PORTC7);   // Turn the LED on.
+          |     ^~~~~
+          |     PORT0
+    /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:11:20: error: 'PORTC7' was not declared in this scope; did you mean 'PORT7'?
+       11 |     PORTC |= (1 << PORTC7);   // Turn the LED on.
+          |                    ^~~~~~
+          |                    PORT7
+    make[2]: *** [CMakeFiles/buzzer.dir/build.make:63: CMakeFiles/buzzer.dir/main.cpp.o] Error 1
+    make[1]: *** [CMakeFiles/Makefile2:76: CMakeFiles/buzzer.dir/all] Error 2
+    make: *** [Makefile:84: all] Error 2
+    #+end_example
 
-     add_definitions(-DF_CPU=${AVR_CPU_FREQUENCY} -DARDUINO=10607 -DARDUINO_AVR_A_STAR_32U4
-       -DARDUINO_ARCH_AVR -DUSB_VID=${AVR_USB_VENDOR_ID} -DUSB_PID=${AVR_USB_PRODUCT_ID}
-       -DUSB_MANUFACTURER=${AVR_USB_MANUFACTURER} -DUSB_PRODUCT=${AVR_USB_PRODUCT})
-   #+end_src
+    The good news is no more linking errors occurred for now. We can now just
+    copy those missing definitions from arduino-cli's commands:
 
-   #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
-     <<buzzer-cmake-conf-header>>
-     <<cmake-conf-core-includes>>
-     <<cmake-conf-avr-includes>>
-     <<cmake-conf-mcu-variant-includes>>
-     <<cmake-conf-defines>>
-   #+end_src
+    #+name: cmake-conf-defines
+    #+begin_src cmake
+      set(AVR_CPU_FREQUENCY 16000000L)
+      set(AVR_USB_MANUFACTURER "Pololu Corporation")
+      set(AVR_USB_PRODUCT "Pololu A-Star 32U4")
+      set(AVR_USB_PRODUCT_ID 0x2300)
+      set(AVR_USB_VENDOR_ID 0x1ffb)
+
+      add_definitions(-DF_CPU=${AVR_CPU_FREQUENCY} -DARDUINO=10607 -DARDUINO_AVR_A_STAR_32U4
+        -DARDUINO_ARCH_AVR -DUSB_VID=${AVR_USB_VENDOR_ID} -DUSB_PID=${AVR_USB_PRODUCT_ID}
+        -DUSB_MANUFACTURER=${AVR_USB_MANUFACTURER} -DUSB_PRODUCT=${AVR_USB_PRODUCT})
+    #+end_src
+
+    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
+      <<buzzer-cmake-conf-header>>
+      <<cmake-conf-core-includes>>
+      <<cmake-conf-avr-includes>>
+      <<cmake-conf-mcu-variant-includes>>
+      <<cmake-conf-defines>>
+    #+end_src
 
 
-   #+begin_src sh :dir examples :results output verbatim
-     ./cmake_test.sh buzzer
-   #+end_src
+    #+begin_src sh :dir examples :results output verbatim
+      ./cmake_test.sh buzzer
+    #+end_src
 
-   #+RESULTS:
-   #+begin_example
-   -- The CXX compiler identification is GNU 9.3.0
-   -- Check for working CXX compiler: /usr/bin/c++
-   -- Check for working CXX compiler: /usr/bin/c++ -- works
-   -- Detecting CXX compiler ABI info
-   -- Detecting CXX compiler ABI info - done
-   -- Detecting CXX compile features
-   -- Detecting CXX compile features - done
-   -- Configuring done
-   -- Generating done
-   -- Build files have been written to: /tmp/tmp.foxzWKHa6N
-   Scanning dependencies of target buzzer
-   [ 50%] Building CXX object CMakeFiles/buzzer.dir/main.cpp.o
-   In file included from /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:90,
-                    from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:28,
-                    from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/io.h:711:6: warning: #warning "device type not defined" [-Wcpp]
-     711 | #    warning "device type not defined"
-         |      ^~~~~~~
-   In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/USBAPI.h:25,
-                    from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:234,
-                    from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/eeprom.h:41:3: warning: #warning "Device does not have EEPROM available." [-Wcpp]
-      41 | # warning "Device does not have EEPROM available."
-         |   ^~~~~~~
-   In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/USBAPI.h:27,
-                    from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:234,
-                    from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/util/delay.h:112:3: warning: #warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed" [-Wcpp]
-     112 | # warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
-         |   ^~~~~~~
-   In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:164:48: warning: 'progmem' attribute directive ignored [-Wattributes]
-     164 | extern const uint16_t PROGMEM port_to_mode_PGM[];
-         |                                                ^
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:165:49: warning: 'progmem' attribute directive ignored [-Wattributes]
-     165 | extern const uint16_t PROGMEM port_to_input_PGM[];
-         |                                                 ^
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:166:50: warning: 'progmem' attribute directive ignored [-Wattributes]
-     166 | extern const uint16_t PROGMEM port_to_output_PGM[];
-         |                                                  ^
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:168:54: warning: 'progmem' attribute directive ignored [-Wattributes]
-     168 | extern const uint8_t PROGMEM digital_pin_to_port_PGM[];
-         |                                                      ^
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:170:58: warning: 'progmem' attribute directive ignored [-Wattributes]
-     170 | extern const uint8_t PROGMEM digital_pin_to_bit_mask_PGM[];
-         |                                                          ^
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:171:55: warning: 'progmem' attribute directive ignored [-Wattributes]
-     171 | extern const uint8_t PROGMEM digital_pin_to_timer_PGM[];
-         |                                                       ^
-   In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:258,
-                    from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/pololu-a-star/hardware/avr/4.0.2/variants/a-star328pb/pins_arduino.h: In function 'void analogWrite328PB(uint8_t, int)':
-   /home/caio/.arduino15/packages/pololu-a-star/hardware/avr/4.0.2/variants/a-star328pb/pins_arduino.h:237:7: error: 'PORTD' was not declared in this scope; did you mean 'PORT0'?
-     237 |       PORTD |= (1 << 2);
-         |       ^~~~~
-         |       PORT0
-   /home/caio/.arduino15/packages/pololu-a-star/hardware/avr/4.0.2/variants/a-star328pb/pins_arduino.h:242:7: error: 'PORTD' was not declared in this scope; did you mean 'PORT0'?
-     242 |       PORTD &= ~(1 << 2);
-         |       ^~~~~
-         |       PORT0
-   /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp: In function 'void setup()':
-   /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:7:5: error: 'DDRC' was not declared in this scope
-       7 |     DDRC |= (1 << DDC7);    // Make pin 13 be an output.
-         |     ^~~~
-   /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:7:19: error: 'DDC7' was not declared in this scope; did you mean 'DD7'?
-       7 |     DDRC |= (1 << DDC7);    // Make pin 13 be an output.
-         |                   ^~~~
-         |                   DD7
-   /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp: In function 'void loop()':
-   /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:11:5: error: 'PORTC' was not declared in this scope; did you mean 'PORT0'?
-      11 |     PORTC |= (1 << PORTC7);   // Turn the LED on.
-         |     ^~~~~
-         |     PORT0
-   /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:11:20: error: 'PORTC7' was not declared in this scope; did you mean 'PORT7'?
-      11 |     PORTC |= (1 << PORTC7);   // Turn the LED on.
-         |                    ^~~~~~
-         |                    PORT7
-   make[2]: *** [CMakeFiles/buzzer.dir/build.make:63: CMakeFiles/buzzer.dir/main.cpp.o] Error 1
-   make[1]: *** [CMakeFiles/Makefile2:76: CMakeFiles/buzzer.dir/all] Error 2
-   make: *** [Makefile:84: all] Error 2
-   #+end_example
+    #+RESULTS:
+    #+begin_example
+    -- The CXX compiler identification is GNU 9.3.0
+    -- Check for working CXX compiler: /usr/bin/c++
+    -- Check for working CXX compiler: /usr/bin/c++ -- works
+    -- Detecting CXX compiler ABI info
+    -- Detecting CXX compiler ABI info - done
+    -- Detecting CXX compile features
+    -- Detecting CXX compile features - done
+    -- Configuring done
+    -- Generating done
+    -- Build files have been written to: /tmp/tmp.foxzWKHa6N
+    Scanning dependencies of target buzzer
+    [ 50%] Building CXX object CMakeFiles/buzzer.dir/main.cpp.o
+    In file included from /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:90,
+                     from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:28,
+                     from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/io.h:711:6: warning: #warning "device type not defined" [-Wcpp]
+      711 | #    warning "device type not defined"
+          |      ^~~~~~~
+    In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/USBAPI.h:25,
+                     from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:234,
+                     from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/eeprom.h:41:3: warning: #warning "Device does not have EEPROM available." [-Wcpp]
+       41 | # warning "Device does not have EEPROM available."
+          |   ^~~~~~~
+    In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/USBAPI.h:27,
+                     from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:234,
+                     from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/util/delay.h:112:3: warning: #warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed" [-Wcpp]
+      112 | # warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
+          |   ^~~~~~~
+    In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:164:48: warning: 'progmem' attribute directive ignored [-Wattributes]
+      164 | extern const uint16_t PROGMEM port_to_mode_PGM[];
+          |                                                ^
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:165:49: warning: 'progmem' attribute directive ignored [-Wattributes]
+      165 | extern const uint16_t PROGMEM port_to_input_PGM[];
+          |                                                 ^
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:166:50: warning: 'progmem' attribute directive ignored [-Wattributes]
+      166 | extern const uint16_t PROGMEM port_to_output_PGM[];
+          |                                                  ^
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:168:54: warning: 'progmem' attribute directive ignored [-Wattributes]
+      168 | extern const uint8_t PROGMEM digital_pin_to_port_PGM[];
+          |                                                      ^
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:170:58: warning: 'progmem' attribute directive ignored [-Wattributes]
+      170 | extern const uint8_t PROGMEM digital_pin_to_bit_mask_PGM[];
+          |                                                          ^
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:171:55: warning: 'progmem' attribute directive ignored [-Wattributes]
+      171 | extern const uint8_t PROGMEM digital_pin_to_timer_PGM[];
+          |                                                       ^
+    In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:258,
+                     from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/pololu-a-star/hardware/avr/4.0.2/variants/a-star328pb/pins_arduino.h: In function 'void analogWrite328PB(uint8_t, int)':
+    /home/caio/.arduino15/packages/pololu-a-star/hardware/avr/4.0.2/variants/a-star328pb/pins_arduino.h:237:7: error: 'PORTD' was not declared in this scope; did you mean 'PORT0'?
+      237 |       PORTD |= (1 << 2);
+          |       ^~~~~
+          |       PORT0
+    /home/caio/.arduino15/packages/pololu-a-star/hardware/avr/4.0.2/variants/a-star328pb/pins_arduino.h:242:7: error: 'PORTD' was not declared in this scope; did you mean 'PORT0'?
+      242 |       PORTD &= ~(1 << 2);
+          |       ^~~~~
+          |       PORT0
+    /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp: In function 'void setup()':
+    /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:7:5: error: 'DDRC' was not declared in this scope
+        7 |     DDRC |= (1 << DDC7);    // Make pin 13 be an output.
+          |     ^~~~
+    /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:7:19: error: 'DDC7' was not declared in this scope; did you mean 'DD7'?
+        7 |     DDRC |= (1 << DDC7);    // Make pin 13 be an output.
+          |                   ^~~~
+          |                   DD7
+    /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp: In function 'void loop()':
+    /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:11:5: error: 'PORTC' was not declared in this scope; did you mean 'PORT0'?
+       11 |     PORTC |= (1 << PORTC7);   // Turn the LED on.
+          |     ^~~~~
+          |     PORT0
+    /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:11:20: error: 'PORTC7' was not declared in this scope; did you mean 'PORT7'?
+       11 |     PORTC |= (1 << PORTC7);   // Turn the LED on.
+          |                    ^~~~~~
+          |                    PORT7
+    make[2]: *** [CMakeFiles/buzzer.dir/build.make:63: CMakeFiles/buzzer.dir/main.cpp.o] Error 1
+    make[1]: *** [CMakeFiles/Makefile2:76: CMakeFiles/buzzer.dir/all] Error 2
+    make: *** [Makefile:84: all] Error 2
+    #+end_example
 
-   From that we can see some definitions are still missing. We can actually fix
-   this by changing the compiler to clang and setting up cross compilation.
+    From that we can see some definitions are still missing. We can actually fix
+    this by changing the compiler to clang and setting up cross compilation.
 
-   #+name: cmake-conf-cross-compilation-variables
-   #+begin_src cmake
-     set(CMAKE_C_COMPILER clang)
-     set(CMAKE_C_COMPILER_TARGET avr)
-     set(CMAKE_CXX_COMPILER clang++)
-     set(CMAKE_CXX_COMPILER_TARGET avr)
-     set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -mmcu=atmega32u4)
-   #+end_src
+    #+name: cmake-conf-cross-compilation-variables
+    #+begin_src cmake
+      set(CMAKE_C_COMPILER clang)
+      set(CMAKE_C_COMPILER_TARGET avr)
+      set(CMAKE_CXX_COMPILER clang++)
+      set(CMAKE_CXX_COMPILER_TARGET avr)
+      set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -mmcu=atmega32u4)
+    #+end_src
 
-   #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
-     <<cmake-conf-cross-compilation-variables>>
-     <<buzzer-cmake-conf-header>>
-     <<cmake-conf-core-includes>>
-     <<cmake-conf-avr-includes>>
-     <<cmake-conf-mcu-variant-includes>>
-     <<cmake-conf-defines>>
-   #+end_src
+    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
+      <<cmake-conf-cross-compilation-variables>>
+      <<buzzer-cmake-conf-header>>
+      <<cmake-conf-core-includes>>
+      <<cmake-conf-avr-includes>>
+      <<cmake-conf-mcu-variant-includes>>
+      <<cmake-conf-defines>>
+    #+end_src
 
-   #+begin_src sh :dir examples :results output verbatim
-     ./cmake_test.sh buzzer
-   #+end_src
+    #+begin_src sh :dir examples :results output verbatim
+      ./cmake_test.sh buzzer
+    #+end_src
 
-   #+RESULTS:
-   #+begin_example
-   -- The CXX compiler identification is Clang 10.0.0
-   -- Check for working CXX compiler: /usr/bin/clang++
-   -- Check for working CXX compiler: /usr/bin/clang++ -- works
-   -- Detecting CXX compiler ABI info
-   -- Detecting CXX compiler ABI info - done
-   -- Detecting CXX compile features
-   -- Detecting CXX compile features - done
-   -- Configuring done
-   -- Generating done
-   -- Build files have been written to: /tmp/tmp.MXzCqnHWHK
-   Scanning dependencies of target buzzer
-   [ 50%] Building CXX object CMakeFiles/buzzer.dir/main.cpp.o
-   In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:164:23: warning: unknown attribute '__progmem__' ignored [-Wunknown-attributes]
-   extern const uint16_t PROGMEM port_to_mode_PGM[];
+    #+RESULTS:
+    #+begin_example
+    -- The CXX compiler identification is Clang 10.0.0
+    -- Check for working CXX compiler: /usr/bin/clang++
+    -- Check for working CXX compiler: /usr/bin/clang++ -- works
+    -- Detecting CXX compiler ABI info
+    -- Detecting CXX compiler ABI info - done
+    -- Detecting CXX compile features
+    -- Detecting CXX compile features - done
+    -- Configuring done
+    -- Generating done
+    -- Build files have been written to: /tmp/tmp.MXzCqnHWHK
+    Scanning dependencies of target buzzer
+    [ 50%] Building CXX object CMakeFiles/buzzer.dir/main.cpp.o
+    In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:164:23: warning: unknown attribute '__progmem__' ignored [-Wunknown-attributes]
+    extern const uint16_t PROGMEM port_to_mode_PGM[];
+                          ^
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:113:17: note: expanded from macro 'PROGMEM'
+    #define PROGMEM __ATTR_PROGMEM__
+                    ^
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:98:41: note: expanded from macro '__ATTR_PROGMEM__'
+    #define __ATTR_PROGMEM__ __attribute__((__progmem__))
+                                            ^
+    In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:165:23: warning: unknown attribute '__progmem__' ignored [-Wunknown-attributes]
+    extern const uint16_t PROGMEM port_to_input_PGM[];
+                          ^
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:113:17: note: expanded from macro 'PROGMEM'
+    #define PROGMEM __ATTR_PROGMEM__
+                    ^
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:98:41: note: expanded from macro '__ATTR_PROGMEM__'
+    #define __ATTR_PROGMEM__ __attribute__((__progmem__))
+                                            ^
+    In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:166:23: warning: unknown attribute '__progmem__' ignored [-Wunknown-attributes]
+    extern const uint16_t PROGMEM port_to_output_PGM[];
+                          ^
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:113:17: note: expanded from macro 'PROGMEM'
+    #define PROGMEM __ATTR_PROGMEM__
+                    ^
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:98:41: note: expanded from macro '__ATTR_PROGMEM__'
+    #define __ATTR_PROGMEM__ __attribute__((__progmem__))
+                                            ^
+    In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:168:22: warning: unknown attribute '__progmem__' ignored [-Wunknown-attributes]
+    extern const uint8_t PROGMEM digital_pin_to_port_PGM[];
                          ^
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:113:17: note: expanded from macro 'PROGMEM'
-   #define PROGMEM __ATTR_PROGMEM__
-                   ^
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:98:41: note: expanded from macro '__ATTR_PROGMEM__'
-   #define __ATTR_PROGMEM__ __attribute__((__progmem__))
-                                           ^
-   In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:165:23: warning: unknown attribute '__progmem__' ignored [-Wunknown-attributes]
-   extern const uint16_t PROGMEM port_to_input_PGM[];
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:113:17: note: expanded from macro 'PROGMEM'
+    #define PROGMEM __ATTR_PROGMEM__
+                    ^
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:98:41: note: expanded from macro '__ATTR_PROGMEM__'
+    #define __ATTR_PROGMEM__ __attribute__((__progmem__))
+                                            ^
+    In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:170:22: warning: unknown attribute '__progmem__' ignored [-Wunknown-attributes]
+    extern const uint8_t PROGMEM digital_pin_to_bit_mask_PGM[];
                          ^
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:113:17: note: expanded from macro 'PROGMEM'
-   #define PROGMEM __ATTR_PROGMEM__
-                   ^
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:98:41: note: expanded from macro '__ATTR_PROGMEM__'
-   #define __ATTR_PROGMEM__ __attribute__((__progmem__))
-                                           ^
-   In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:166:23: warning: unknown attribute '__progmem__' ignored [-Wunknown-attributes]
-   extern const uint16_t PROGMEM port_to_output_PGM[];
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:113:17: note: expanded from macro 'PROGMEM'
+    #define PROGMEM __ATTR_PROGMEM__
+                    ^
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:98:41: note: expanded from macro '__ATTR_PROGMEM__'
+    #define __ATTR_PROGMEM__ __attribute__((__progmem__))
+                                            ^
+    In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:171:22: warning: unknown attribute '__progmem__' ignored [-Wunknown-attributes]
+    extern const uint8_t PROGMEM digital_pin_to_timer_PGM[];
                          ^
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:113:17: note: expanded from macro 'PROGMEM'
-   #define PROGMEM __ATTR_PROGMEM__
-                   ^
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:98:41: note: expanded from macro '__ATTR_PROGMEM__'
-   #define __ATTR_PROGMEM__ __attribute__((__progmem__))
-                                           ^
-   In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:168:22: warning: unknown attribute '__progmem__' ignored [-Wunknown-attributes]
-   extern const uint8_t PROGMEM digital_pin_to_port_PGM[];
-                        ^
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:113:17: note: expanded from macro 'PROGMEM'
-   #define PROGMEM __ATTR_PROGMEM__
-                   ^
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:98:41: note: expanded from macro '__ATTR_PROGMEM__'
-   #define __ATTR_PROGMEM__ __attribute__((__progmem__))
-                                           ^
-   In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:170:22: warning: unknown attribute '__progmem__' ignored [-Wunknown-attributes]
-   extern const uint8_t PROGMEM digital_pin_to_bit_mask_PGM[];
-                        ^
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:113:17: note: expanded from macro 'PROGMEM'
-   #define PROGMEM __ATTR_PROGMEM__
-                   ^
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:98:41: note: expanded from macro '__ATTR_PROGMEM__'
-   #define __ATTR_PROGMEM__ __attribute__((__progmem__))
-                                           ^
-   In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:171:22: warning: unknown attribute '__progmem__' ignored [-Wunknown-attributes]
-   extern const uint8_t PROGMEM digital_pin_to_timer_PGM[];
-                        ^
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:113:17: note: expanded from macro 'PROGMEM'
-   #define PROGMEM __ATTR_PROGMEM__
-                   ^
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:98:41: note: expanded from macro '__ATTR_PROGMEM__'
-   #define __ATTR_PROGMEM__ __attribute__((__progmem__))
-                                           ^
-   In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:234:
-   In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/USBAPI.h:27:
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/util/delay.h:112:3: warning: "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed" [-W#warnings]
-   # warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
-     ^
-   7 warnings generated.
-   [100%] Linking CXX executable buzzer
-   clang: warning: support for linking stdlibs for microcontroller 'atmega32u4' is not implemented [-Wavr-rtlib-linking-quirks]
-   clang: warning: standard library not linked and so no interrupt vector table or compiler runtime routines will be linked [-Wavr-rtlib-linking-quirks]
-   clang: warning: argument unused during compilation: '-rdynamic' [-Wunused-command-line-argument]
-   [100%] Built target buzzer
-   #+end_example
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:113:17: note: expanded from macro 'PROGMEM'
+    #define PROGMEM __ATTR_PROGMEM__
+                    ^
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/pgmspace.h:98:41: note: expanded from macro '__ATTR_PROGMEM__'
+    #define __ATTR_PROGMEM__ __attribute__((__progmem__))
+                                            ^
+    In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:234:
+    In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/USBAPI.h:27:
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/util/delay.h:112:3: warning: "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed" [-W#warnings]
+    # warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
+      ^
+    7 warnings generated.
+    [100%] Linking CXX executable buzzer
+    clang: warning: support for linking stdlibs for microcontroller 'atmega32u4' is not implemented [-Wavr-rtlib-linking-quirks]
+    clang: warning: standard library not linked and so no interrupt vector table or compiler runtime routines will be linked [-Wavr-rtlib-linking-quirks]
+    clang: warning: argument unused during compilation: '-rdynamic' [-Wunused-command-line-argument]
+    [100%] Built target buzzer
+    #+end_example
 
-   Cool! We got our first successful compilation. Now to fix the progmem warning
-   we have to understand where this is coming from: ~__progmem__~ is built in
-   avr-gcc and is a [[https://www.arduino.cc/reference/en/language/variables/utilities/progmem/][variable modifier to store data in flash memory instead of
-   RAM]]. Since it's defined by the compiler we need to roll out our own. Luckily
-   clang has the built-in attribute =address_space= that does the same
-   thing. Let's try it out:
+    Cool! We got our first successful compilation. Now to fix the progmem warning
+    we have to understand where this is coming from: ~__progmem__~ is built in
+    avr-gcc and is a [[https://www.arduino.cc/reference/en/language/variables/utilities/progmem/][variable modifier to store data in flash memory instead of
+    RAM]]. Since it's defined by the compiler we need to roll out our own. Luckily
+    clang has the built-in attribute =address_space= that does the same
+    thing. Let's try it out:
 
-   #+name: cmake-conf-define-progmem
-   #+begin_src cmake
-     add_definitions("-D__progmem__=address_space(1)")
-   #+end_src
+    #+name: cmake-conf-define-progmem
+    #+begin_src cmake
+      add_definitions("-D__progmem__=address_space(1)")
+    #+end_src
 
-   #+name: cmake-buzzer-conf-after-progmem
-   #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
-     <<cmake-conf-cross-compilation-variables>>
-     <<buzzer-cmake-conf-header>>
-     <<cmake-conf-core-includes>>
-     <<cmake-conf-avr-includes>>
-     <<cmake-conf-mcu-variant-includes>>
-     <<cmake-conf-defines>>
-     <<cmake-conf-define-progmem>>
-   #+end_src
+    #+name: cmake-buzzer-conf-after-progmem
+    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
+      <<cmake-conf-cross-compilation-variables>>
+      <<buzzer-cmake-conf-header>>
+      <<cmake-conf-core-includes>>
+      <<cmake-conf-avr-includes>>
+      <<cmake-conf-mcu-variant-includes>>
+      <<cmake-conf-defines>>
+      <<cmake-conf-define-progmem>>
+    #+end_src
 
-   #+begin_src sh :dir examples :results output verbatim
-     ./cmake_test.sh buzzer
-   #+end_src
+    #+begin_src sh :dir examples :results output verbatim
+      ./cmake_test.sh buzzer
+    #+end_src
 
-   #+RESULTS:
-   #+begin_example
-   -- The CXX compiler identification is Clang 10.0.0
-   -- Check for working CXX compiler: /usr/bin/clang++
-   -- Check for working CXX compiler: /usr/bin/clang++ -- works
-   -- Detecting CXX compiler ABI info
-   -- Detecting CXX compiler ABI info - done
-   -- Detecting CXX compile features
-   -- Detecting CXX compile features - done
-   -- Configuring done
-   -- Generating done
-   -- Build files have been written to: /tmp/tmp.91SXZ1rPzK
-   Scanning dependencies of target buzzer
-   [ 50%] Building CXX object CMakeFiles/buzzer.dir/main.cpp.o
-   In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
-   In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:234:
-   In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/USBAPI.h:27:
-   /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/util/delay.h:112:3: warning: "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed" [-W#warnings]
-   # warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
-     ^
-   1 warning generated.
-   [100%] Linking CXX executable buzzer
-   clang: warning: support for linking stdlibs for microcontroller 'atmega32u4' is not implemented [-Wavr-rtlib-linking-quirks]
-   clang: warning: standard library not linked and so no interrupt vector table or compiler runtime routines will be linked [-Wavr-rtlib-linking-quirks]
-   clang: warning: argument unused during compilation: '-rdynamic' [-Wunused-command-line-argument]
-   [100%] Built target buzzer
-   #+end_example
+    #+RESULTS:
+    #+begin_example
+    -- The CXX compiler identification is Clang 10.0.0
+    -- Check for working CXX compiler: /usr/bin/clang++
+    -- Check for working CXX compiler: /usr/bin/clang++ -- works
+    -- Detecting CXX compiler ABI info
+    -- Detecting CXX compiler ABI info - done
+    -- Detecting CXX compile features
+    -- Detecting CXX compile features - done
+    -- Configuring done
+    -- Generating done
+    -- Build files have been written to: /tmp/tmp.91SXZ1rPzK
+    Scanning dependencies of target buzzer
+    [ 50%] Building CXX object CMakeFiles/buzzer.dir/main.cpp.o
+    In file included from /home/caio/reps/arduino-cmake/examples/buzzer/src/main.cpp:1:
+    In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:234:
+    In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/USBAPI.h:27:
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/util/delay.h:112:3: warning: "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed" [-W#warnings]
+    # warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
+      ^
+    1 warning generated.
+    [100%] Linking CXX executable buzzer
+    clang: warning: support for linking stdlibs for microcontroller 'atmega32u4' is not implemented [-Wavr-rtlib-linking-quirks]
+    clang: warning: standard library not linked and so no interrupt vector table or compiler runtime routines will be linked [-Wavr-rtlib-linking-quirks]
+    clang: warning: argument unused during compilation: '-rdynamic' [-Wunused-command-line-argument]
+    [100%] Built target buzzer
+    #+end_example
 
-   Cool, the warnings stopped and the code compiled, but, to confirm the
-   variables are being allocated on progmem, let's write another code sample and
-   check the IR generated.
+    Cool, the warnings stopped and the code compiled, but, to confirm the
+    variables are being allocated on progmem, let's write another code sample and
+    check the IR generated.
 
-   #+begin_src c++ :tangle examples/progmemTest/src/main.cpp :mkdirp t
-     #include <Arduino.h>
+    #+begin_src c++ :tangle examples/progmemTest/src/main.cpp :mkdirp t
+      #include <Arduino.h>
 
-     #include <avr/io.h>
-     #include <avr/pgmspace.h>
-     #include <util/delay.h>
+      #include <avr/io.h>
+      #include <avr/pgmspace.h>
+      #include <util/delay.h>
 
-     const PROGMEM uint16_t _constWithAddr[] = { 10 };
-     const uint16_t _constWithoutAddr[] = { 1 };
+      const PROGMEM uint16_t _constWithAddr[] = { 10 };
+      const uint16_t _constWithoutAddr[] = { 1 };
 
-     int main() {
-         printf("%d, %d", _constWithAddr[0], _constWithoutAddr[1]);
-     }
-   #+end_src
+      int main() {
+          printf("%d, %d", _constWithAddr[0], _constWithoutAddr[1]);
+      }
+    #+end_srcp
 
-   Now the CMake configuration. The last line tells the compiler to emit LLVM
-   bitcode instead of the object file.
+    Now the CMake configuration. The last line tells the compiler to emit LLVM
+    bitcode instead of the object file.
 
-   #+begin_src cmake :tangle examples/progmemTest/src/CMakeLists.txt :noweb yes
-     <<cmake-conf-cross-compilation-variables>>
-     cmake_minimum_required(VERSION 3.0.0)
-     project(progmem_test CXX)
-     add_executable(progmem_test main.cpp)
-     <<cmake-conf-core-includes>>
-     <<cmake-conf-avr-includes>>
-     <<cmake-conf-mcu-variant-includes>>
-     <<cmake-conf-defines>>
-     <<cmake-conf-define-progmem>>
+    #+begin_src cmake :tangle examples/progmemTest/src/CMakeLists.txt :noweb yes
+      <<cmake-conf-cross-compilation-variables>>
+      cmake_minimum_required(VERSION 3.0.0)
+      project(progmem_test CXX)
+      add_executable(progmem_test main.cpp)
+      <<cmake-conf-core-includes>>
+      <<cmake-conf-avr-includes>>
+      <<cmake-conf-mcu-variant-includes>>
+      <<cmake-conf-defines>>
+      <<cmake-conf-define-progmem>>
 
-     target_compile_options(progmem_test PUBLIC ${CMAKE_CXX_FLAGS} -flto)
-   #+end_src
+      target_compile_options(progmem_test PUBLIC ${CMAKE_CXX_FLAGS} -flto)
+    #+end_src
 
-   And now let's test.
+    And now let's test.
 
-   #+begin_src bash :dir examples/progmemTest :results output verbatim
-     out_dir=`mktemp -d`
-     cmake -S ./src -B ${out_dir} > /dev/null
-     pushd ${out_dir}
-     make > /dev/null || true
-     popd
-     llvm-dis ${out_dir}/CMakeFiles/progmem_test.dir/main.cpp.o -o main.ll
-     cat main.ll
-   #+end_src
+    #+begin_src bash :dir examples/progmemTest :results output verbatim
+      out_dir=`mktemp -d`
+      cmake -S ./src -B ${out_dir} > /dev/null
+      pushd ${out_dir}
+      make > /dev/null || true
+      popd
+      llvm-dis ${out_dir}/CMakeFiles/progmem_test.dir/main.cpp.o -o main.ll
+      cat main.ll
+    #+end_src
 
-   #+RESULTS:
-   #+begin_example
-   /tmp/tmp.y3uUvnjBa7 ~/reps/arduino-cmake/examples/progmemTest
-   ~/reps/arduino-cmake/examples/progmemTest
-   ; ModuleID = '/tmp/tmp.y3uUvnjBa7/CMakeFiles/progmem_test.dir/main.cpp.o'
-   source_filename = "/home/caio/reps/arduino-cmake/examples/progmemTest/src/main.cpp"
-   target datalayout = "e-P1-p:16:8-i8:8-i16:8-i32:8-i64:8-f32:8-f64:8-n8-a:8"
-   target triple = "avr"
+    #+RESULTS:
+    #+begin_example
+    /tmp/tmp.y3uUvnjBa7 ~/reps/arduino-cmake/examples/progmemTest
+    ~/reps/arduino-cmake/examples/progmemTest
+    ; ModuleID = '/tmp/tmp.y3uUvnjBa7/CMakeFiles/progmem_test.dir/main.cpp.o'
+    source_filename = "/home/caio/reps/arduino-cmake/examples/progmemTest/src/main.cpp"
+    target datalayout = "e-P1-p:16:8-i8:8-i16:8-i32:8-i64:8-f32:8-f64:8-n8-a:8"
+    target triple = "avr"
 
-   @.str = private unnamed_addr constant [7 x i8] c"%d, %d\00", align 1
-   @_ZL14_constWithAddr = internal addrspace(1) constant [1 x i16] [i16 10], align 1
-   @_ZL17_constWithoutAddr = internal constant [1 x i16] [i16 1], align 1
+    @.str = private unnamed_addr constant [7 x i8] c"%d, %d\00", align 1
+    @_ZL14_constWithAddr = internal addrspace(1) constant [1 x i16] [i16 10], align 1
+    @_ZL17_constWithoutAddr = internal constant [1 x i16] [i16 1], align 1
 
-   ; Function Attrs: noinline norecurse optnone
-   define dso_local i16 @main() addrspace(1) #0 {
-     %1 = load i16, i16 addrspace(1)* getelementptr inbounds ([1 x i16], [1 x i16] addrspace(1)* @_ZL14_constWithAddr, i16 0, i16 0), align 1
-     %2 = load i16, i16* getelementptr inbounds ([1 x i16], [1 x i16]* @_ZL17_constWithoutAddr, i64 1, i16 0), align 1
-     %3 = call addrspace(1) i16 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str, i16 0, i16 0), i16 %1, i16 %2)
-     ret i16 0
-   }
+    ; Function Attrs: noinline norecurse optnone
+    define dso_local i16 @main() addrspace(1) #0 {
+      %1 = load i16, i16 addrspace(1)* getelementptr inbounds ([1 x i16], [1 x i16] addrspace(1)* @_ZL14_constWithAddr, i16 0, i16 0), align 1
+      %2 = load i16, i16* getelementptr inbounds ([1 x i16], [1 x i16]* @_ZL17_constWithoutAddr, i64 1, i16 0), align 1
+      %3 = call addrspace(1) i16 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str, i16 0, i16 0), i16 %1, i16 %2)
+      ret i16 0
+    }
 
-   declare dso_local i16 @printf(i8*, ...) addrspace(1) #1
+    declare dso_local i16 @printf(i8*, ...) addrspace(1) #1
 
-   attributes #0 = { noinline norecurse optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="atmega32u4" "unsafe-fp-math"="false" "use-soft-float"="false" }
-   attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="atmega32u4" "unsafe-fp-math"="false" "use-soft-float"="false" }
+    attributes #0 = { noinline norecurse optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="atmega32u4" "unsafe-fp-math"="false" "use-soft-float"="false" }
+    attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="atmega32u4" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
-   !llvm.module.flags = !{!0, !1, !2}
-   !llvm.ident = !{!3}
+    !llvm.module.flags = !{!0, !1, !2}
+    !llvm.ident = !{!3}
 
-   !0 = !{i32 1, !"wchar_size", i32 2}
-   !1 = !{i32 1, !"ThinLTO", i32 0}
-   !2 = !{i32 1, !"EnableSplitLTOUnit", i32 1}
-   !3 = !{!"clang version 10.0.0-4ubuntu1 "}
+    !0 = !{i32 1, !"wchar_size", i32 2}
+    !1 = !{i32 1, !"ThinLTO", i32 0}
+    !2 = !{i32 1, !"EnableSplitLTOUnit", i32 1}
+    !3 = !{!"clang version 10.0.0-4ubuntu1 "}
 
-   ^0 = module: (path: "/tmp/tmp.y3uUvnjBa7/CMakeFiles/progmem_test.dir/main.cpp.o", hash: (0, 0, 0, 0, 0))
-   ^1 = gv: (name: "_ZL14_constWithAddr", summaries: (variable: (module: ^0, flags: (linkage: internal, notEligibleToImport: 1, live: 0, dsoLocal: 1, canAutoHide: 0), varFlags: (readonly: 1, writeonly: 1)))) ; guid = 3119710769462609323
-   ^2 = gv: (name: ".str", summaries: (variable: (module: ^0, flags: (linkage: private, notEligibleToImport: 1, live: 0, dsoLocal: 1, canAutoHide: 0), varFlags: (readonly: 1, writeonly: 1)))) ; guid = 3317877839269159587
-   ^3 = gv: (name: "printf") ; guid = 7383291119112528047
-   ^4 = gv: (name: "_ZL17_constWithoutAddr", summaries: (variable: (module: ^0, flags: (linkage: internal, notEligibleToImport: 1, live: 0, dsoLocal: 1, canAutoHide: 0), varFlags: (readonly: 1, writeonly: 1)))) ; guid = 9942515123028409410
-   ^5 = gv: (name: "main", summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 1, live: 0, dsoLocal: 1, canAutoHide: 0), insts: 4, funcFlags: (readNone: 0, readOnly: 0, noRecurse: 1, returnDoesNotAlias: 0, noInline: 1, alwaysInline: 0), calls: ((callee: ^3)), refs: (^1, ^4, ^2)))) ; guid = 15822663052811949562
-   #+end_example
+    ^0 = module: (path: "/tmp/tmp.y3uUvnjBa7/CMakeFiles/progmem_test.dir/main.cpp.o", hash: (0, 0, 0, 0, 0))
+    ^1 = gv: (name: "_ZL14_constWithAddr", summaries: (variable: (module: ^0, flags: (linkage: internal, notEligibleToImport: 1, live: 0, dsoLocal: 1, canAutoHide: 0), varFlags: (readonly: 1, writeonly: 1)))) ; guid = 3119710769462609323
+    ^2 = gv: (name: ".str", summaries: (variable: (module: ^0, flags: (linkage: private, notEligibleToImport: 1, live: 0, dsoLocal: 1, canAutoHide: 0), varFlags: (readonly: 1, writeonly: 1)))) ; guid = 3317877839269159587
+    ^3 = gv: (name: "printf") ; guid = 7383291119112528047
+    ^4 = gv: (name: "_ZL17_constWithoutAddr", summaries: (variable: (module: ^0, flags: (linkage: internal, notEligibleToImport: 1, live: 0, dsoLocal: 1, canAutoHide: 0), varFlags: (readonly: 1, writeonly: 1)))) ; guid = 9942515123028409410
+    ^5 = gv: (name: "main", summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 1, live: 0, dsoLocal: 1, canAutoHide: 0), insts: 4, funcFlags: (readNone: 0, readOnly: 0, noRecurse: 1, returnDoesNotAlias: 0, noInline: 1, alwaysInline: 0), calls: ((callee: ^3)), refs: (^1, ^4, ^2)))) ; guid = 15822663052811949562
+    #+end_example
 
-   Cool! We can see from the output of the previous program that
-   ~_constWithAddr~ is assigned to ~addrspace(1)~ and ~_constWithoutAddr~
-   doesn't have an ~addrspace~ set up. This is exactly what we wanted.
+    Cool! We can see from the output of the previous program that
+    ~_constWithAddr~ is assigned to ~addrspace(1)~ and ~_constWithoutAddr~
+    doesn't have an ~addrspace~ set up. This is exactly what we wanted.
