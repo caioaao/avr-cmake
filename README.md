@@ -1,15 +1,25 @@
-- [Motivation](#org92ffacc)
-- [But first&#x2026;](#orge319cfa)
-- [Let's build it](#org7f62090)
-  - [Pre-processing](#org7f0ea44)
-  - [Dependency resolution](#orgb675efb)
-  - [Compilation](#org011c0a5)
-    - [Compiling main](#org983ed0b)
+- [Motivation](#org94cb748)
+- [But first&#x2026;](#org5e192a3)
+- [Let's build it](#org342a935)
+  - [Pre-processing](#orgf4b8452)
+  - [Dependency resolution](#org37d88c6)
+  - [Compilation](#orgf8412c5)
+    - [Compiling main](#org83b917d)
 
-PS: this is a literate programming document. This means you can evaluate it and it will generate and/or run examples in code blocks. See this for more info: <http://cachestocaches.com/2018/6/org-literate-programming/>
+PS: this is a literate programming document. This means everything is derived from a single file, the [avr-cmake.org](./avr-cmake.md). Here's the small makefile to generate the examples and the readme:
+
+```makefile
+all: examples README.md
+examples: avr-cmake.org
+	time emacs --batch --no-init-file --load .org-mode.emacs.el --find-file avr-cmake.org --funcall org-babel-tangle --kill
+README.md: avr-cmake.org
+	time emacs --batch --load .org-mode.emacs.el --find-file avr-cmake.org --eval '(export-gfm "README.md")' --kill
+clean:
+	-rm -rf README.md examples
+```
 
 
-<a id="org92ffacc"></a>
+<a id="org94cb748"></a>
 
 # Motivation
 
@@ -24,7 +34,7 @@ CMake has a huge community and, when you do it right, it comes with a lot of fre
 By the way, there's a project that tries to cover this use but it's still not quite what I want. They do a great job at automatically finding stuff, but it still relies on `avr-gcc=/=avr-g++`, which is not what I want (`avr/*` includes for instance are not resolved properly).
 
 
-<a id="orge319cfa"></a>
+<a id="org5e192a3"></a>
 
 # But first&#x2026;
 
@@ -285,14 +295,14 @@ void setMotors()
 ```
 
 
-<a id="org7f62090"></a>
+<a id="org342a935"></a>
 
 # Let's build it
 
 Let's start from the available Arduino documentation about its [build process](https://arduino.github.io/arduino-cli/sketch-build-process/).
 
 
-<a id="org7f0ea44"></a>
+<a id="orgf4b8452"></a>
 
 ## Pre-processing
 
@@ -556,7 +566,7 @@ int main() {
 ```
 
 
-<a id="orgb675efb"></a>
+<a id="org37d88c6"></a>
 
 ## Dependency resolution
 
@@ -675,7 +685,7 @@ arduino-cli compile --fqbn pololu-a-star:avr:a-star32U4 -v --dry-run .
 Here we see that it automatically detects the dependency on `Wire` and `Zumo32U4`, but we don't need that. We can simply define them on CMake, so we'll skip this part for now.
 
 
-<a id="org011c0a5"></a>
+<a id="orgf8412c5"></a>
 
 ## Compilation
 
@@ -725,7 +735,7 @@ cd ${out_dir} && make 2>&1 || true # rerouting stderr to stdout to export result
 As expected this didn't work. We'll start by compiling our main file, and then go through compiling the dependencies.
 
 
-<a id="org983ed0b"></a>
+<a id="org83b917d"></a>
 
 ### Compiling main
 
