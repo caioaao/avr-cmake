@@ -46,8 +46,7 @@ http://cachestocaches.com/2018/6/org-literate-programming/
   The first one is a led buzzer. Since it uses the minimum amount of libraries
   it should be a good starting point:
 
-  #+name: buzzer_sketch
-  #+begin_src arduino :tangle examples/buzzer/sketch/sketch.ino :mkdirp t
+  #+begin_src arduino :tangle examples/buzzer/sketch/sketch.ino :mkdirp t :noweb-ref buzzer-sketch
     #include <avr/io.h>
     #include <util/delay.h>
 
@@ -65,8 +64,7 @@ http://cachestocaches.com/2018/6/org-literate-programming/
 
   The second one is another example from them, but now it uses their libraries.
 
-  #+name: balancing_sketch
-  #+begin_src arduino :tangle examples/balancing/sketch/sketch.ino :mkdirp t
+  #+begin_src arduino :tangle examples/balancing/sketch/sketch.ino :mkdirp t :noweb-ref balancing-sketch
     /* This example shows how to use the Zumo 32U4's LSM303D
     accelerometer and L3GD20H gyro to balance on its front end.
     Please note that the balancing algorithm in this code is not
@@ -301,10 +299,10 @@ http://cachestocaches.com/2018/6/org-literate-programming/
    It basically adds the arduino header and a main function to a sketch. Let's
    do that manually, since the goal here is to work with plain C++ files.
 
-   #+begin_src c++ :tangle examples/buzzer/src/main.cpp :mkdirp t
+   #+begin_src c++ :tangle examples/buzzer/src/main.cpp :mkdirp t :noweb yes
      #include <Arduino.h>
 
-     <<buzzer_sketch>>
+     <<buzzer-sketch>>
 
      int main() {
          setup();
@@ -313,10 +311,10 @@ http://cachestocaches.com/2018/6/org-literate-programming/
      }
    #+end_src
 
-   #+begin_src c++ :tangle examples/balancing/src/main.cpp :mkdirp t
+   #+begin_src c++ :tangle examples/balancing/src/main.cpp :mkdirp t :noweb yes
      #include <Arduino.h>
 
-     <<balancing_sketch>>
+     <<balancing-sketch>>
 
      int main() {
          setup();
@@ -451,8 +449,7 @@ http://cachestocaches.com/2018/6/org-literate-programming/
    Now to the fun stuff. I'll start with a very basic CMake configuration for
    the projects:
 
-   #+name: buzzer-cmake-conf-header
-   #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt
+   #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb-ref buzzer-cmake-conf-header
      cmake_minimum_required(VERSION 3.0.0)
      project(buzzer CXX)
      add_executable(buzzer main.cpp)
@@ -506,15 +503,14 @@ http://cachestocaches.com/2018/6/org-literate-programming/
     ~~/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino~. Let's add
     it as an arduino core dependency:
 
-    #+name: cmake-conf-core-includes
-    #+begin_src cmake
+    #+begin_src cmake :noweb-ref cmake-conf-core-includes
       set(ARDUINO_CORE_VERSION 1.8.3)
       set(ARDUINO_CORE_INCLUDES $ENV{HOME}/.arduino15/packages/arduino/hardware/avr/${ARDUINO_CORE_VERSION}/cores/arduino)
 
       include_directories(BEFORE ${ARDUINO_CORE_INCLUDES})
     #+end_src
 
-    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt
+    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
       <<buzzer-cmake-conf-header>>
       <<cmake-conf-core-includes>>
     #+end_src
@@ -567,8 +563,7 @@ http://cachestocaches.com/2018/6/org-literate-programming/
     ~<arduino-cli-dir>/packages/arduino/tools/avr-gcc/<avr-gcc-version>/avr/lib~.
     next to this one we see the include dir. Let's add this to the config with the following snippet:
 
-    #+name: cmake-conf-avr-includes
-    #+begin_src cmake
+    #+begin_src cmake :noweb-ref cmake-conf-avr-includes
       # I'll hard code this for now. we can play around with discovery later on
       set(AVR_GCC_VERSION "7.3.0-atmel3.6.1-arduino7")
       set(AVR_GCC_INCLUDES $ENV{HOME}/.arduino15/packages/arduino/tools/avr-gcc/${AVR_GCC_VERSION}/avr/include)
@@ -578,7 +573,7 @@ http://cachestocaches.com/2018/6/org-literate-programming/
 
     We put this in our config file and test it again:
 
-    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt
+    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
       <<buzzer-cmake-conf-header>>
       <<cmake-conf-core-includes>>
       <<cmake-conf-avr-includes>>
@@ -637,8 +632,7 @@ http://cachestocaches.com/2018/6/org-literate-programming/
     define those missing values. We can see on arduino-cli's output that it uses
     arduino leonardo's variants, but we'll use the one provided by Pololu's library:
 
-    #+name: cmake-conf-mcu-variant-includes
-    #+begin_src cmake
+    #+begin_src cmake :noweb-ref cmake-conf-mcu-variant-includes
       set(MCU_VARIANT_PACKAGE pololu-a-star) # the package that defines the variant
       set(MCU_VARIANT_NAME a-star328pb)
       set(MCU_VARIANT_VERSION 4.0.2)
@@ -650,7 +644,7 @@ http://cachestocaches.com/2018/6/org-literate-programming/
 
     And the file we have now is:
 
-    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt
+    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
       <<buzzer-cmake-conf-header>>
       <<cmake-conf-core-includes>>
       <<cmake-conf-avr-includes>>
@@ -753,8 +747,7 @@ http://cachestocaches.com/2018/6/org-literate-programming/
     The good news is no more linking errors occurred for now. We can now just
     copy those missing definitions from arduino-cli's commands:
 
-    #+name: cmake-conf-defines
-    #+begin_src cmake
+    #+begin_src cmake :noweb-ref cmake-conf-defines
       set(AVR_CPU_FREQUENCY 16000000L)
       set(AVR_USB_MANUFACTURER "Pololu Corporation")
       set(AVR_USB_PRODUCT "Pololu A-Star 32U4")
@@ -766,7 +759,7 @@ http://cachestocaches.com/2018/6/org-literate-programming/
         -DUSB_MANUFACTURER=${AVR_USB_MANUFACTURER} -DUSB_PRODUCT=${AVR_USB_PRODUCT})
     #+end_src
 
-    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt
+    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
       <<buzzer-cmake-conf-header>>
       <<cmake-conf-core-includes>>
       <<cmake-conf-avr-includes>>
@@ -866,8 +859,7 @@ http://cachestocaches.com/2018/6/org-literate-programming/
     From that we can see some definitions are still missing. We can actually fix
     this by changing the compiler to clang and setting up cross compilation.
 
-    #+name: cmake-conf-cross-compilation-variables
-    #+begin_src cmake
+    #+begin_src cmake :noweb-ref cmake-conf-cross-compilation-variables
       set(CMAKE_C_COMPILER clang)
       set(CMAKE_C_COMPILER_TARGET avr)
       set(CMAKE_CXX_COMPILER clang++)
@@ -875,7 +867,7 @@ http://cachestocaches.com/2018/6/org-literate-programming/
       set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -mmcu=atmega32u4)
     #+end_src
 
-    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt
+    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
       <<cmake-conf-cross-compilation-variables>>
       <<buzzer-cmake-conf-header>>
       <<cmake-conf-core-includes>>
@@ -983,12 +975,11 @@ http://cachestocaches.com/2018/6/org-literate-programming/
     clang has the built-in attribute =address_space= that does the same
     thing. Let's try it out:
 
-    #+name: cmake-conf-define-progmem
-    #+begin_src cmake
+    #+begin_src cmake :noweb-ref cmake-conf-define-progmem
       add_definitions("-D__progmem__=address_space(1)")
     #+end_src
 
-    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt
+    #+begin_src cmake :tangle examples/buzzer/src/CMakeLists.txt :noweb yes
       <<cmake-conf-cross-compilation-variables>>
       <<buzzer-cmake-conf-header>>
       <<cmake-conf-core-includes>>
@@ -1054,7 +1045,7 @@ http://cachestocaches.com/2018/6/org-literate-programming/
     Now the CMake configuration. The last line tells the compiler to emit LLVM
     bitcode instead of the object file.
 
-    #+begin_src cmake :tangle examples/progmemTest/src/CMakeLists.txt
+    #+begin_src cmake :tangle examples/progmemTest/src/CMakeLists.txt :noweb yes
       <<cmake-conf-cross-compilation-variables>>
       cmake_minimum_required(VERSION 3.0.0)
       project(progmem_test CXX)
