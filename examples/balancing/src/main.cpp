@@ -81,7 +81,7 @@ void setup()
   for (uint16_t i = 0; i < 1024; i++)
   {
     // Wait for new data to be available, then read it.
-    while(!gyro.readReg(L3G::STATUS_REG) & 0x08);
+    while(!(gyro.readReg(L3G::STATUS_REG) & 0x08));
     gyro.read();
 
     // Add the Y axis reading to the total.

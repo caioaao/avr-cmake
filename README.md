@@ -1,10 +1,10 @@
-- [Motivation](#org94cb748)
-- [But first&#x2026;](#org5e192a3)
-- [Let's build it](#org342a935)
-  - [Pre-processing](#orgf4b8452)
-  - [Dependency resolution](#org37d88c6)
-  - [Compilation](#orgf8412c5)
-    - [Compiling main](#org83b917d)
+- [Motivation](#orgdc92d2c)
+- [But first&#x2026;](#orgbc3662c)
+- [Let's build it](#org4607280)
+  - [Pre-processing](#org9e79169)
+  - [Dependency resolution](#orgbb05c01)
+  - [Compilation](#org8c75c3e)
+    - [Compiling main](#orgf593c1c)
 
 PS: this is a literate programming document. This means everything is derived from a single file, the [avr-cmake.org](./avr-cmake.md). Here's the small makefile to generate the examples and the readme:
 
@@ -19,7 +19,7 @@ clean:
 ```
 
 
-<a id="org94cb748"></a>
+<a id="orgdc92d2c"></a>
 
 # Motivation
 
@@ -34,7 +34,7 @@ CMake has a huge community and, when you do it right, it comes with a lot of fre
 By the way, there's a project that tries to cover this use but it's still not quite what I want. They do a great job at automatically finding stuff, but it still relies on `avr-gcc=/=avr-g++`, which is not what I want (`avr/*` includes for instance are not resolved properly).
 
 
-<a id="org5e192a3"></a>
+<a id="orgbc3662c"></a>
 
 # But first&#x2026;
 
@@ -151,7 +151,7 @@ void setup()
   for (uint16_t i = 0; i < 1024; i++)
   {
     // Wait for new data to be available, then read it.
-    while(!gyro.readReg(L3G::STATUS_REG) & 0x08);
+    while(!(gyro.readReg(L3G::STATUS_REG) & 0x08));
     gyro.read();
 
     // Add the Y axis reading to the total.
@@ -295,14 +295,14 @@ void setMotors()
 ```
 
 
-<a id="org342a935"></a>
+<a id="org4607280"></a>
 
 # Let's build it
 
 Let's start from the available Arduino documentation about its [build process](https://arduino.github.io/arduino-cli/sketch-build-process/).
 
 
-<a id="orgf4b8452"></a>
+<a id="org9e79169"></a>
 
 ## Pre-processing
 
@@ -416,7 +416,7 @@ void setup()
   for (uint16_t i = 0; i < 1024; i++)
   {
     // Wait for new data to be available, then read it.
-    while(!gyro.readReg(L3G::STATUS_REG) & 0x08);
+    while(!(gyro.readReg(L3G::STATUS_REG) & 0x08));
     gyro.read();
 
     // Add the Y axis reading to the total.
@@ -566,7 +566,7 @@ int main() {
 ```
 
 
-<a id="org37d88c6"></a>
+<a id="orgbb05c01"></a>
 
 ## Dependency resolution
 
@@ -685,7 +685,7 @@ arduino-cli compile --fqbn pololu-a-star:avr:a-star32U4 -v --dry-run .
 Here we see that it automatically detects the dependency on `Wire` and `Zumo32U4`, but we don't need that. We can simply define them on CMake, so we'll skip this part for now.
 
 
-<a id="orgf8412c5"></a>
+<a id="org8c75c3e"></a>
 
 ## Compilation
 
@@ -735,7 +735,7 @@ cd ${out_dir} && make 2>&1 || true # rerouting stderr to stdout to export result
 As expected this didn't work. We'll start by compiling our main file, and then go through compiling the dependencies.
 
 
-<a id="org83b917d"></a>
+<a id="orgf593c1c"></a>
 
 ### Compiling main
 
@@ -994,7 +994,7 @@ And our new output:
     make[1]: *** [CMakeFiles/Makefile2:76: CMakeFiles/buzzer.dir/all] Error 2
     make: *** [Makefile:84: all] Error 2
 
-The good news is no more linking errors occurred for now. We can now just copy those missing definitions from arduino-cli's commands:
+The good news is no more includes errors occurred for now. We can now just copy those missing definitions from arduino-cli's commands:
 
 ```cmake
 set(AVR_CPU_FREQUENCY 16000000L)
@@ -1467,3 +1467,239 @@ cp ${out_dir}/compile_commands.json .
 Yay! You can test clangd with any LSP client now and it should provide autocomplete for you. Here's a screenshot of my Emacs screen showing the definition of `DDRC`:
 
 ![img](./img/lsp_doc.png "Emacs LSP mode - showing documentation of constant defined by 32u4 library")
+
+Now let's do the same for our more complicated example. It depends on two other libraries: `Wire` and `Zumo32U4`. Let's add them as dependencies based on the paths from arduino-cli's output:
+
+```cmake
+# paths from arduino-cli: -I~/.arduino15/packages/arduino/hardware/avr/1.8.3/libraries/Wire/src -I~/Arduino/libraries/Zumo32U4
+set(AVR_EXTRA_LIBRARIES Wire)
+set(AVR_EXTERNAL_LIBRARIES Zumo32U4)
+
+foreach(LIB_NAME in ${AVR_EXTRA_LIBRARIES})
+  include_directories(AFTER $ENV{HOME}/.arduino15/packages/arduino/hardware/avr/${ARDUINO_CORE_VERSION}/libraries/${LIB_NAME}/src)
+endforeach(lib_name)
+
+foreach(LIB_NAME in ${AVR_EXTERNAL_LIBRARIES})
+  include_directories(AFTER $ENV{HOME}/Arduino/libraries/${LIB_NAME})
+endforeach(lib_name)
+```
+
+Now let's tangle this with the rest of the config:
+
+```cmake
+set(CMAKE_C_COMPILER clang)
+set(CMAKE_C_COMPILER_TARGET avr)
+set(CMAKE_CXX_COMPILER clang++)
+set(CMAKE_CXX_COMPILER_TARGET avr)
+set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -mmcu=atmega32u4)
+
+cmake_minimum_required(VERSION 3.0.0)
+project(balancing CXX)
+add_executable(balancing main.cpp)
+
+set(ARDUINO_CORE_VERSION 1.8.3)
+set(ARDUINO_CORE_INCLUDES $ENV{HOME}/.arduino15/packages/arduino/hardware/avr/${ARDUINO_CORE_VERSION}/cores/arduino)
+
+include_directories(BEFORE ${ARDUINO_CORE_INCLUDES})
+# I'll hard code this for now. we can play around with discovery later on
+set(AVR_GCC_VERSION "7.3.0-atmel3.6.1-arduino7")
+set(AVR_GCC_INCLUDES $ENV{HOME}/.arduino15/packages/arduino/tools/avr-gcc/${AVR_GCC_VERSION}/avr/include)
+
+include_directories(AFTER ${AVR_GCC_INCLUDES})
+set(MCU_VARIANT_PACKAGE pololu-a-star) # the package that defines the variant
+set(MCU_VARIANT_NAME a-star328pb)
+set(MCU_VARIANT_VERSION 4.0.2)
+
+set(MCU_VARIANT_INCLUDES $ENV{HOME}/.arduino15/packages/${MCU_VARIANT_PACKAGE}/hardware/avr/${MCU_VARIANT_VERSION}/variants/${MCU_VARIANT_NAME})
+
+include_directories(AFTER ${MCU_VARIANT_INCLUDES})
+set(AVR_CPU_FREQUENCY 16000000L)
+set(AVR_USB_MANUFACTURER "Pololu Corporation")
+set(AVR_USB_PRODUCT "Pololu A-Star 32U4")
+set(AVR_USB_PRODUCT_ID 0x2300)
+set(AVR_USB_VENDOR_ID 0x1ffb)
+
+add_definitions(-DF_CPU=${AVR_CPU_FREQUENCY} -DARDUINO=10607 -DARDUINO_AVR_A_STAR_32U4
+  -DARDUINO_ARCH_AVR -DUSB_VID=${AVR_USB_VENDOR_ID} -DUSB_PID=${AVR_USB_PRODUCT_ID}
+  -DUSB_MANUFACTURER=${AVR_USB_MANUFACTURER} -DUSB_PRODUCT=${AVR_USB_PRODUCT})
+add_definitions("-D__progmem__=address_space(1)")
+# paths from arduino-cli: -I~/.arduino15/packages/arduino/hardware/avr/1.8.3/libraries/Wire/src -I~/Arduino/libraries/Zumo32U4
+set(AVR_EXTRA_LIBRARIES Wire)
+set(AVR_EXTERNAL_LIBRARIES Zumo32U4)
+
+foreach(LIB_NAME in ${AVR_EXTRA_LIBRARIES})
+  include_directories(AFTER $ENV{HOME}/.arduino15/packages/arduino/hardware/avr/${ARDUINO_CORE_VERSION}/libraries/${LIB_NAME}/src)
+endforeach(lib_name)
+
+foreach(LIB_NAME in ${AVR_EXTERNAL_LIBRARIES})
+  include_directories(AFTER $ENV{HOME}/Arduino/libraries/${LIB_NAME})
+endforeach(lib_name)
+```
+
+```sh
+./cmake_test.sh balancing | head -n 50
+```
+
+    -- The CXX compiler identification is Clang 10.0.0
+    -- Check for working CXX compiler: /usr/bin/clang++
+    -- Check for working CXX compiler: /usr/bin/clang++ -- works
+    -- Detecting CXX compiler ABI info
+    -- Detecting CXX compiler ABI info - done
+    -- Detecting CXX compile features
+    -- Detecting CXX compile features - done
+    -- Configuring done
+    -- Generating done
+    -- Build files have been written to: /tmp/tmp.y8jwzimGPc
+    Scanning dependencies of target balancing
+    [ 50%] Building CXX object CMakeFiles/balancing.dir/main.cpp.o
+    In file included from /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:1:
+    In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:234:
+    In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/USBAPI.h:27:
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/util/delay.h:112:3: warning: "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed" [-W#warnings]
+    # warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
+      ^
+    In file included from /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:19:
+    In file included from /home/caio/Arduino/libraries/Zumo32U4/Zumo32U4.h:16:
+    /home/caio/Arduino/libraries/Zumo32U4/FastGPIO.h:142:9: error: non-constant-expression cannot be narrowed from type 'uint16_t' (aka 'unsigned int') to 'uint8_t' (aka 'unsigned char') in initializer list [-Wc++11-narrowing]
+            _FG_PIN(D, 2),
+            ^~~~~~~~~~~~~
+    /home/caio/Arduino/libraries/Zumo32U4/FastGPIO.h:53:30: note: expanded from macro '_FG_PIN'
+    #define _FG_PIN(port, bit) { _SFR_MEM_ADDR(PIN##port), _SFR_MEM_ADDR(PORT##port), \
+                                 ^~~~~~~~~~~~~~~~~~~~~~~~
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/sfr_defs.h:182:28: note: expanded from macro '_SFR_MEM_ADDR'
+    #define _SFR_MEM_ADDR(sfr) ((uint16_t) &(sfr))
+                               ^~~~~~~~~~~~~~~~~~~
+    /home/caio/Arduino/libraries/Zumo32U4/FastGPIO.h:142:9: note: insert an explicit cast to silence this issue
+            _FG_PIN(D, 2),
+            ^~~~~~~~~~~~~
+    /home/caio/Arduino/libraries/Zumo32U4/FastGPIO.h:53:30: note: expanded from macro '_FG_PIN'
+    #define _FG_PIN(port, bit) { _SFR_MEM_ADDR(PIN##port), _SFR_MEM_ADDR(PORT##port), \
+                                 ^~~~~~~~~~~~~~~~~~~~~~~~
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/sfr_defs.h:182:28: note: expanded from macro '_SFR_MEM_ADDR'
+    #define _SFR_MEM_ADDR(sfr) ((uint16_t) &(sfr))
+                               ^~~~~~~~~~~~~~~~~~~
+    In file included from /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:19:
+    In file included from /home/caio/Arduino/libraries/Zumo32U4/Zumo32U4.h:16:
+    /home/caio/Arduino/libraries/Zumo32U4/FastGPIO.h:142:9: error: non-constant-expression cannot be narrowed from type 'uint16_t' (aka 'unsigned int') to 'uint8_t' (aka 'unsigned char') in initializer list [-Wc++11-narrowing]
+            _FG_PIN(D, 2),
+            ^~~~~~~~~~~~~
+    /home/caio/Arduino/libraries/Zumo32U4/FastGPIO.h:53:56: note: expanded from macro '_FG_PIN'
+    #define _FG_PIN(port, bit) { _SFR_MEM_ADDR(PIN##port), _SFR_MEM_ADDR(PORT##port), \
+                                                           ^~~~~~~~~~~~~~~~~~~~~~~~~
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/sfr_defs.h:182:28: note: expanded from macro '_SFR_MEM_ADDR'
+    #define _SFR_MEM_ADDR(sfr) ((uint16_t) &(sfr))
+                               ^~~~~~~~~~~~~~~~~~~
+    /home/caio/Arduino/libraries/Zumo32U4/FastGPIO.h:142:9: note: insert an explicit cast to silence this issue
+
+Awesome. Those errors were expected and need to be disabled with the flag `Wno-narrowing`. Let's go ahead and fix the optimization error as well.
+
+```cmake
+add_compile_options(-Wno-narrowing -Os -fpermissive -fno-exceptions -ffunction-sections -fdata-sections -fno-threadsafe-statics -MMD)
+```
+
+```cmake
+set(CMAKE_C_COMPILER clang)
+set(CMAKE_C_COMPILER_TARGET avr)
+set(CMAKE_CXX_COMPILER clang++)
+set(CMAKE_CXX_COMPILER_TARGET avr)
+set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -mmcu=atmega32u4)
+add_compile_options(-Wno-narrowing -Os -fpermissive -fno-exceptions -ffunction-sections -fdata-sections -fno-threadsafe-statics -MMD)
+
+cmake_minimum_required(VERSION 3.0.0)
+project(balancing CXX)
+add_executable(balancing main.cpp)
+
+set(ARDUINO_CORE_VERSION 1.8.3)
+set(ARDUINO_CORE_INCLUDES $ENV{HOME}/.arduino15/packages/arduino/hardware/avr/${ARDUINO_CORE_VERSION}/cores/arduino)
+
+include_directories(BEFORE ${ARDUINO_CORE_INCLUDES})
+# I'll hard code this for now. we can play around with discovery later on
+set(AVR_GCC_VERSION "7.3.0-atmel3.6.1-arduino7")
+set(AVR_GCC_INCLUDES $ENV{HOME}/.arduino15/packages/arduino/tools/avr-gcc/${AVR_GCC_VERSION}/avr/include)
+
+include_directories(AFTER ${AVR_GCC_INCLUDES})
+set(MCU_VARIANT_PACKAGE pololu-a-star) # the package that defines the variant
+set(MCU_VARIANT_NAME a-star328pb)
+set(MCU_VARIANT_VERSION 4.0.2)
+
+set(MCU_VARIANT_INCLUDES $ENV{HOME}/.arduino15/packages/${MCU_VARIANT_PACKAGE}/hardware/avr/${MCU_VARIANT_VERSION}/variants/${MCU_VARIANT_NAME})
+
+include_directories(AFTER ${MCU_VARIANT_INCLUDES})
+set(AVR_CPU_FREQUENCY 16000000L)
+set(AVR_USB_MANUFACTURER "Pololu Corporation")
+set(AVR_USB_PRODUCT "Pololu A-Star 32U4")
+set(AVR_USB_PRODUCT_ID 0x2300)
+set(AVR_USB_VENDOR_ID 0x1ffb)
+
+add_definitions(-DF_CPU=${AVR_CPU_FREQUENCY} -DARDUINO=10607 -DARDUINO_AVR_A_STAR_32U4
+  -DARDUINO_ARCH_AVR -DUSB_VID=${AVR_USB_VENDOR_ID} -DUSB_PID=${AVR_USB_PRODUCT_ID}
+  -DUSB_MANUFACTURER=${AVR_USB_MANUFACTURER} -DUSB_PRODUCT=${AVR_USB_PRODUCT})
+add_definitions("-D__progmem__=address_space(1)")
+# paths from arduino-cli: -I~/.arduino15/packages/arduino/hardware/avr/1.8.3/libraries/Wire/src -I~/Arduino/libraries/Zumo32U4
+set(AVR_EXTRA_LIBRARIES Wire)
+set(AVR_EXTERNAL_LIBRARIES Zumo32U4)
+
+foreach(LIB_NAME in ${AVR_EXTRA_LIBRARIES})
+  include_directories(AFTER $ENV{HOME}/.arduino15/packages/arduino/hardware/avr/${ARDUINO_CORE_VERSION}/libraries/${LIB_NAME}/src)
+endforeach(lib_name)
+
+foreach(LIB_NAME in ${AVR_EXTERNAL_LIBRARIES})
+  include_directories(AFTER $ENV{HOME}/Arduino/libraries/${LIB_NAME})
+endforeach(lib_name)
+```
+
+```sh
+./cmake_test.sh balancing | head -n 50
+```
+
+    -- The CXX compiler identification is Clang 10.0.0
+    -- Check for working CXX compiler: /usr/bin/clang++
+    -- Check for working CXX compiler: /usr/bin/clang++ -- works
+    -- Detecting CXX compiler ABI info
+    -- Detecting CXX compiler ABI info - done
+    -- Detecting CXX compile features
+    -- Detecting CXX compile features - done
+    -- Configuring done
+    -- Generating done
+    -- Build files have been written to: /tmp/tmp.Y6w0GLayQz
+    Scanning dependencies of target balancing
+    [ 50%] Building CXX object CMakeFiles/balancing.dir/main.cpp.o
+    /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:74:13: error: reinterpret_cast from 'const __attribute__((address_space(1))) char *' to 'const __FlashStringHelper *' is not allowed
+      lcd.print(F("Gyro cal"));
+                ^~~~~~~~~~~~~
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/WString.h:38:28: note: expanded from macro 'F'
+    #define F(string_literal) (reinterpret_cast<const __FlashStringHelper *>(PSTR(string_literal)))
+                               ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:99:5: error: use of undeclared identifier 'updateAngleGyro'
+        updateAngleGyro();
+        ^
+    /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:108:7: error: use of undeclared identifier 'correctAngleAccel'
+          correctAngleAccel();
+          ^
+    /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:109:7: error: use of undeclared identifier 'printAngles'
+          printAngles();
+          ^
+    /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:118:3: error: use of undeclared identifier 'updateAngleGyro'
+      updateAngleGyro();
+      ^
+    /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:127:5: error: use of undeclared identifier 'correctAngleAccel'
+        correctAngleAccel();
+        ^
+    /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:128:5: error: use of undeclared identifier 'printAngles'
+        printAngles();
+        ^
+    /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:129:5: error: use of undeclared identifier 'setMotors'
+        setMotors();
+        ^
+    /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:137:13: error: reinterpret_cast from 'const __attribute__((address_space(1))) char *' to 'const __FlashStringHelper *' is not allowed
+      lcd.print(F("  "));
+                ^~~~~~~
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/WString.h:38:28: note: expanded from macro 'F'
+    #define F(string_literal) (reinterpret_cast<const __FlashStringHelper *>(PSTR(string_literal)))
+                               ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    9 errors generated.
+    make[2]: *** [CMakeFiles/balancing.dir/build.make:63: CMakeFiles/balancing.dir/main.cpp.o] Error 1
+    make[1]: *** [CMakeFiles/Makefile2:76: CMakeFiles/balancing.dir/all] Error 2
+    make: *** [Makefile:84: all] Error 2
+
+And that's where I hit a wall. Apparently the assumption I made about `address_space` being suited as `__progmem__` isn't true and breaks this.

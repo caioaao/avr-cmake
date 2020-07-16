@@ -157,7 +157,7 @@ clean:
     for (uint16_t i = 0; i < 1024; i++)
     {
       // Wait for new data to be available, then read it.
-      while(!gyro.readReg(L3G::STATUS_REG) & 0x08);
+      while(!(gyro.readReg(L3G::STATUS_REG) & 0x08));
       gyro.read();
 
       // Add the Y axis reading to the total.
@@ -1161,3 +1161,179 @@ clean:
     #+CAPTION: Emacs LSP mode - showing documentation of constant defined by 32u4 library
     #+NAME: fig:LSP documentation
     [[./img/lsp_doc.png]]
+
+    Now let's do the same for our more complicated example. It depends on two
+    other libraries: =Wire= and =Zumo32U4=. Let's add them as dependencies based
+    on the paths from arduino-cli's output:
+
+    #+begin_src cmake :noweb-ref cmake-external-dependencies
+    # paths from arduino-cli: -I~/.arduino15/packages/arduino/hardware/avr/1.8.3/libraries/Wire/src -I~/Arduino/libraries/Zumo32U4
+    set(AVR_EXTRA_LIBRARIES Wire)
+    set(AVR_EXTERNAL_LIBRARIES Zumo32U4)
+
+    foreach(LIB_NAME in ${AVR_EXTRA_LIBRARIES})
+      include_directories(AFTER $ENV{HOME}/.arduino15/packages/arduino/hardware/avr/${ARDUINO_CORE_VERSION}/libraries/${LIB_NAME}/src)
+    endforeach(lib_name)
+
+    foreach(LIB_NAME in ${AVR_EXTERNAL_LIBRARIES})
+      include_directories(AFTER $ENV{HOME}/Arduino/libraries/${LIB_NAME})
+    endforeach(lib_name)
+    #+end_src
+
+    Now let's tangle this with the rest of the config:
+
+    #+begin_src cmake :tangle examples/balancing/src/CMakeLists.txt :noweb yes
+    <<cmake-conf-cross-compilation-variables>>
+
+    cmake_minimum_required(VERSION 3.0.0)
+    project(balancing CXX)
+    add_executable(balancing main.cpp)
+
+    <<cmake-conf-core-includes>>
+    <<cmake-conf-avr-includes>>
+    <<cmake-conf-mcu-variant-includes>>
+    <<cmake-conf-defines>>
+    <<cmake-conf-define-progmem>>
+    <<cmake-external-dependencies>>
+    #+end_src
+
+    #+begin_src sh :dir examples
+      ./cmake_test.sh balancing | head -n 50
+    #+end_src
+
+    #+RESULTS:
+    #+begin_example
+    -- The CXX compiler identification is Clang 10.0.0
+    -- Check for working CXX compiler: /usr/bin/clang++
+    -- Check for working CXX compiler: /usr/bin/clang++ -- works
+    -- Detecting CXX compiler ABI info
+    -- Detecting CXX compiler ABI info - done
+    -- Detecting CXX compile features
+    -- Detecting CXX compile features - done
+    -- Configuring done
+    -- Generating done
+    -- Build files have been written to: /tmp/tmp.y8jwzimGPc
+    Scanning dependencies of target balancing
+    [ 50%] Building CXX object CMakeFiles/balancing.dir/main.cpp.o
+    In file included from /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:1:
+    In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/Arduino.h:234:
+    In file included from /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/USBAPI.h:27:
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/util/delay.h:112:3: warning: "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed" [-W#warnings]
+    # warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
+      ^
+    In file included from /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:19:
+    In file included from /home/caio/Arduino/libraries/Zumo32U4/Zumo32U4.h:16:
+    /home/caio/Arduino/libraries/Zumo32U4/FastGPIO.h:142:9: error: non-constant-expression cannot be narrowed from type 'uint16_t' (aka 'unsigned int') to 'uint8_t' (aka 'unsigned char') in initializer list [-Wc++11-narrowing]
+            _FG_PIN(D, 2),
+            ^~~~~~~~~~~~~
+    /home/caio/Arduino/libraries/Zumo32U4/FastGPIO.h:53:30: note: expanded from macro '_FG_PIN'
+    #define _FG_PIN(port, bit) { _SFR_MEM_ADDR(PIN##port), _SFR_MEM_ADDR(PORT##port), \
+                                 ^~~~~~~~~~~~~~~~~~~~~~~~
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/sfr_defs.h:182:28: note: expanded from macro '_SFR_MEM_ADDR'
+    #define _SFR_MEM_ADDR(sfr) ((uint16_t) &(sfr))
+                               ^~~~~~~~~~~~~~~~~~~
+    /home/caio/Arduino/libraries/Zumo32U4/FastGPIO.h:142:9: note: insert an explicit cast to silence this issue
+            _FG_PIN(D, 2),
+            ^~~~~~~~~~~~~
+    /home/caio/Arduino/libraries/Zumo32U4/FastGPIO.h:53:30: note: expanded from macro '_FG_PIN'
+    #define _FG_PIN(port, bit) { _SFR_MEM_ADDR(PIN##port), _SFR_MEM_ADDR(PORT##port), \
+                                 ^~~~~~~~~~~~~~~~~~~~~~~~
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/sfr_defs.h:182:28: note: expanded from macro '_SFR_MEM_ADDR'
+    #define _SFR_MEM_ADDR(sfr) ((uint16_t) &(sfr))
+                               ^~~~~~~~~~~~~~~~~~~
+    In file included from /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:19:
+    In file included from /home/caio/Arduino/libraries/Zumo32U4/Zumo32U4.h:16:
+    /home/caio/Arduino/libraries/Zumo32U4/FastGPIO.h:142:9: error: non-constant-expression cannot be narrowed from type 'uint16_t' (aka 'unsigned int') to 'uint8_t' (aka 'unsigned char') in initializer list [-Wc++11-narrowing]
+            _FG_PIN(D, 2),
+            ^~~~~~~~~~~~~
+    /home/caio/Arduino/libraries/Zumo32U4/FastGPIO.h:53:56: note: expanded from macro '_FG_PIN'
+    #define _FG_PIN(port, bit) { _SFR_MEM_ADDR(PIN##port), _SFR_MEM_ADDR(PORT##port), \
+                                                           ^~~~~~~~~~~~~~~~~~~~~~~~~
+    /home/caio/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include/avr/sfr_defs.h:182:28: note: expanded from macro '_SFR_MEM_ADDR'
+    #define _SFR_MEM_ADDR(sfr) ((uint16_t) &(sfr))
+                               ^~~~~~~~~~~~~~~~~~~
+    /home/caio/Arduino/libraries/Zumo32U4/FastGPIO.h:142:9: note: insert an explicit cast to silence this issue
+    #+end_example
+
+    Awesome. Those errors were expected and need to be disabled with the flag
+    ~Wno-narrowing~. Let's go ahead and fix the optimization error as well.
+
+    #+begin_src cmake :noweb-ref cmake-compile-flags-fix-warnings
+    add_compile_options(-Wno-narrowing -Os -fpermissive -fno-exceptions -ffunction-sections -fdata-sections -fno-threadsafe-statics -MMD)
+    #+end_src
+
+    #+begin_src cmake :tangle examples/balancing/src/CMakeLists.txt :noweb yes
+    <<cmake-conf-cross-compilation-variables>>
+    <<cmake-compile-flags-fix-warnings>>
+
+    cmake_minimum_required(VERSION 3.0.0)
+    project(balancing CXX)
+    add_executable(balancing main.cpp)
+
+    <<cmake-conf-core-includes>>
+    <<cmake-conf-avr-includes>>
+    <<cmake-conf-mcu-variant-includes>>
+    <<cmake-conf-defines>>
+    <<cmake-conf-define-progmem>>
+    <<cmake-external-dependencies>>
+    #+end_src
+
+    #+begin_src sh :dir examples
+      ./cmake_test.sh balancing | head -n 50
+    #+end_src
+
+    #+RESULTS:
+    #+begin_example
+    -- The CXX compiler identification is Clang 10.0.0
+    -- Check for working CXX compiler: /usr/bin/clang++
+    -- Check for working CXX compiler: /usr/bin/clang++ -- works
+    -- Detecting CXX compiler ABI info
+    -- Detecting CXX compiler ABI info - done
+    -- Detecting CXX compile features
+    -- Detecting CXX compile features - done
+    -- Configuring done
+    -- Generating done
+    -- Build files have been written to: /tmp/tmp.Y6w0GLayQz
+    Scanning dependencies of target balancing
+    [ 50%] Building CXX object CMakeFiles/balancing.dir/main.cpp.o
+    /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:74:13: error: reinterpret_cast from 'const __attribute__((address_space(1))) char *' to 'const __FlashStringHelper *' is not allowed
+      lcd.print(F("Gyro cal"));
+                ^~~~~~~~~~~~~
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/WString.h:38:28: note: expanded from macro 'F'
+    #define F(string_literal) (reinterpret_cast<const __FlashStringHelper *>(PSTR(string_literal)))
+                               ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:99:5: error: use of undeclared identifier 'updateAngleGyro'
+        updateAngleGyro();
+        ^
+    /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:108:7: error: use of undeclared identifier 'correctAngleAccel'
+          correctAngleAccel();
+          ^
+    /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:109:7: error: use of undeclared identifier 'printAngles'
+          printAngles();
+          ^
+    /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:118:3: error: use of undeclared identifier 'updateAngleGyro'
+      updateAngleGyro();
+      ^
+    /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:127:5: error: use of undeclared identifier 'correctAngleAccel'
+        correctAngleAccel();
+        ^
+    /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:128:5: error: use of undeclared identifier 'printAngles'
+        printAngles();
+        ^
+    /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:129:5: error: use of undeclared identifier 'setMotors'
+        setMotors();
+        ^
+    /home/caio/reps/arduino-cmake/examples/balancing/src/main.cpp:137:13: error: reinterpret_cast from 'const __attribute__((address_space(1))) char *' to 'const __FlashStringHelper *' is not allowed
+      lcd.print(F("  "));
+                ^~~~~~~
+    /home/caio/.arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino/WString.h:38:28: note: expanded from macro 'F'
+    #define F(string_literal) (reinterpret_cast<const __FlashStringHelper *>(PSTR(string_literal)))
+                               ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    9 errors generated.
+    make[2]: *** [CMakeFiles/balancing.dir/build.make:63: CMakeFiles/balancing.dir/main.cpp.o] Error 1
+    make[1]: *** [CMakeFiles/Makefile2:76: CMakeFiles/balancing.dir/all] Error 2
+    make: *** [Makefile:84: all] Error 2
+    #+end_example
+
+    And that's where I hit a wall. Apparently the assumption I made about
+    ~address_space~ being suited as ~__progmem__~ isn't true and breaks this.
